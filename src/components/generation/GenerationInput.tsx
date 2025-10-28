@@ -1,4 +1,5 @@
-import { useState, useRef, FormEvent, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import type { FormEvent } from 'react'
 import { Paperclip, Send, X } from 'lucide-react'
 
 interface GenerationInputProps {
