@@ -77,6 +77,9 @@ export interface ImageNode extends BaseEmailNode {
 // Divider node
 export interface DividerNode extends BaseEmailNode {
   type: 'divider'
+  color?: string
+  thickness?: number
+  width?: number
 }
 
 // Spacer node
