@@ -2,9 +2,7 @@ import type {
   Email,
   Project,
   GenerateEmailRequest,
-  RenderEmailRequest,
   SendTestEmailRequest,
-  UploadedFile,
   PaginatedResponse
 } from '../types'
 import { API_BASE_URL } from './config'
@@ -28,10 +26,7 @@ class ApiClient {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
-    }
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
     }
 
     const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -151,9 +146,8 @@ class ApiClient {
     const formData = new FormData()
     formData.append('file', file)
 
-    const headers: HeadersInit = {}
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`
+    const headers: HeadersInit = {
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
     }
 
     const response = await fetch(`${this.baseURL}/uploads/image`, {
