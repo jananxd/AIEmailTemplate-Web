@@ -1,51 +1,51 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-
-// Example API fetch function
-async function fetchTodos() {
-  const response = await fetch('https://jsonplaceholder.typicode.com/todos?_limit=5')
-  if (!response.ok) throw new Error('Failed to fetch todos')
-  return response.json()
-}
+import SamplePrompts from '../components/generation/SamplePrompts'
+import GenerationInput from '../components/generation/GenerationInput'
 
 export default function Home() {
-  const [count, setCount] = useState(0)
+  const [selectedPrompt, setSelectedPrompt] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  // Example usage of TanStack Query
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['todos'],
-    queryFn: fetchTodos,
-  })
+  const handleGenerate = async (prompt: string, image?: File) => {
+    setIsGenerating(true)
+
+    // TODO: Call API to generate email
+    console.log('Generating email with prompt:', prompt, 'Image:', image)
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    setIsGenerating(false)
+
+    // TODO: Navigate to email detail page
+  }
 
   return (
-    <div>
-      <h1 className='text-3xl font-bold underline'>Home Page</h1>
-      <p>Welcome to the AI Email Template application!</p>
-
-      <div style={{ margin: '20px 0' }}>
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
+    <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-900 mb-3">
+          Create beautiful emails with AI
+        </h1>
+        <p className="text-lg text-gray-600">
+          Describe what you need, and let AI generate professional email templates instantly
+        </p>
       </div>
 
-      <div style={{ margin: '20px 0' }}>
-        <h2>Example: TanStack Query Data Fetching</h2>
-        {isLoading && <p>Loading todos...</p>}
-        {error && <p>Error: {error.message}</p>}
-        {data && (
-          <ul style={{ textAlign: 'left', maxWidth: '500px', margin: '0 auto' }}>
-            {data.map((todo: { id: number; title: string; completed: boolean }) => (
-              <li key={todo.id}>
-                {todo.title} - {todo.completed ? '✅' : '⏳'}
-              </li>
-            ))}
-          </ul>
+      <div className="space-y-8">
+        <SamplePrompts onSelectPrompt={setSelectedPrompt} />
+
+        <GenerationInput
+          onGenerate={handleGenerate}
+          isLoading={isGenerating}
+          defaultPrompt={selectedPrompt}
+        />
+
+        {isGenerating && (
+          <div className="text-center py-8">
+            <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="mt-4 text-gray-600">Generating your email template...</p>
+          </div>
         )}
-      </div>
-
-      <div style={{ margin: '20px 0' }}>
-        <Link to="/about">Go to About page</Link>
       </div>
     </div>
   )
