@@ -1,6 +1,23 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import type { DragEndEvent } from '@dnd-kit/core'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useEmail, useUpdateEmail } from '../hooks/useEmails'
 import FloatingToolbar from '../components/block-editor/FloatingToolbar'
 import {
@@ -25,12 +42,63 @@ const blockComponents = {
   section: SectionBlock,
 }
 
+interface SortableBlockProps {
+  block: EmailNode
+  isEditing: boolean
+  onUpdate: (updates: Partial<EmailNode>) => void
+  onDelete: () => void
+  onEditToggle: () => void
+}
+
+function SortableBlock({
+  block,
+  isEditing,
+  onUpdate,
+  onDelete,
+  onEditToggle,
+}: SortableBlockProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: block.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const BlockComponent = blockComponents[block.type]
+  if (!BlockComponent) return null
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <BlockComponent
+        block={block}
+        isEditing={isEditing}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+        onEditToggle={onEditToggle}
+      />
+    </div>
+  )
+}
+
 export default function EmailDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data, isLoading } = useEmail(id!)
   const updateEmail = useUpdateEmail()
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   if (isLoading) {
     return (
@@ -61,6 +129,30 @@ export default function EmailDetail() {
 
   const email = data.email
   const blocks = email.jsonStructure.root.children || []
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      const oldIndex = blocks.findIndex((b) => b.id === active.id)
+      const newIndex = blocks.findIndex((b) => b.id === over.id)
+
+      const reorderedBlocks = arrayMove(blocks, oldIndex, newIndex)
+
+      updateEmail.mutate({
+        id: email.id,
+        data: {
+          jsonStructure: {
+            ...email.jsonStructure,
+            root: {
+              ...email.jsonStructure.root,
+              children: reorderedBlocks,
+            },
+          },
+        },
+      })
+    }
+  }
 
   const handleAddBlock = (newBlock: Omit<EmailNode, 'id'>) => {
     const blockWithId = { ...newBlock, id: generateId() } as EmailNode
@@ -137,33 +229,39 @@ export default function EmailDetail() {
 
       {/* Editor Area */}
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="space-y-4">
-          {blocks.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <p>No blocks yet. Use the toolbar below to add content.</p>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={blocks.map((b) => b.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-4">
+              {blocks.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p>No blocks yet. Use the toolbar below to add content.</p>
+                </div>
+              ) : (
+                blocks.map((block) => (
+                  <SortableBlock
+                    key={block.id}
+                    block={block}
+                    isEditing={editingBlockId === block.id}
+                    onUpdate={(updates) => handleUpdateBlock(block.id, updates)}
+                    onDelete={() => handleDeleteBlock(block.id)}
+                    onEditToggle={() =>
+                      setEditingBlockId(
+                        editingBlockId === block.id ? null : block.id
+                      )
+                    }
+                  />
+                ))
+              )}
             </div>
-          ) : (
-            blocks.map((block) => {
-              const BlockComponent = blockComponents[block.type]
-              if (!BlockComponent) return null
-
-              return (
-                <BlockComponent
-                  key={block.id}
-                  block={block}
-                  isEditing={editingBlockId === block.id}
-                  onUpdate={(updates) => handleUpdateBlock(block.id, updates)}
-                  onDelete={() => handleDeleteBlock(block.id)}
-                  onEditToggle={() =>
-                    setEditingBlockId(
-                      editingBlockId === block.id ? null : block.id
-                    )
-                  }
-                />
-              )
-            })
-          )}
-        </div>
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* Floating Toolbar */}
