@@ -9,15 +9,12 @@ export default function ButtonBlock({
   onDelete,
   onEditToggle,
 }: BlockComponentProps) {
-  // Type guard to ensure we have a button block
-  if (block.type !== 'button') {
-    return null
-  }
+  // Initialize hooks at the top - before any conditional returns
+  const [label, setLabel] = useState('')
+  const [href, setHref] = useState('')
+  const [target, setTarget] = useState<'_blank' | '_self'>('_blank')
 
-  const [label, setLabel] = useState(block.label || '')
-  const [href, setHref] = useState(block.href || '')
-  const [target, setTarget] = useState<'_blank' | '_self'>(block.target || '_blank')
-
+  // Sync state with block props
   useEffect(() => {
     if (block.type === 'button') {
       setLabel(block.label || '')
@@ -25,6 +22,11 @@ export default function ButtonBlock({
       setTarget(block.target || '_blank')
     }
   }, [block])
+
+  // Type guard to ensure we have a button block
+  if (block.type !== 'button') {
+    return null
+  }
 
   const handleSave = () => {
     onUpdate({ label, href, target })

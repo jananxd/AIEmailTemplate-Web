@@ -9,25 +9,28 @@ export default function TextBlock({
   onDelete,
   onEditToggle,
 }: BlockComponentProps) {
-  // Type guard to ensure we have a text block
-  if (block.type !== 'text') {
-    return null
-  }
-
-  const [text, setText] = useState(block.text || '')
+  // Initialize hooks at the top - before any conditional returns
+  const [text, setText] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Sync state with block props
   useEffect(() => {
     if (block.type === 'text') {
       setText(block.text || '')
     }
   }, [block])
 
+  // Focus textarea when editing
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus()
     }
   }, [isEditing])
+
+  // Type guard to ensure we have a text block
+  if (block.type !== 'text') {
+    return null
+  }
 
   const handleSave = () => {
     onUpdate({ text })

@@ -9,20 +9,22 @@ export default function HeadingBlock({
   onDelete,
   onEditToggle,
 }: BlockComponentProps) {
-  // Type guard to ensure we have a heading block
-  if (block.type !== 'heading') {
-    return null
-  }
+  // Initialize hooks at the top - before any conditional returns
+  const [text, setText] = useState('')
+  const [level, setLevel] = useState<1 | 2 | 3>(1)
 
-  const [text, setText] = useState(block.text || '')
-  const [level, setLevel] = useState(block.level || 1)
-
+  // Sync state with block props
   useEffect(() => {
     if (block.type === 'heading') {
       setText(block.text || '')
       setLevel(block.level || 1)
     }
   }, [block])
+
+  // Type guard to ensure we have a heading block
+  if (block.type !== 'heading') {
+    return null
+  }
 
   const handleSave = () => {
     onUpdate({ text, level })
