@@ -1,9 +1,8 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { GripVertical, Settings, Trash2 } from 'lucide-react'
 import type { EmailNodeType } from '../../../types'
 
 interface BaseBlockProps {
-  id: string
   type: EmailNodeType
   isEditing: boolean
   onEditToggle: () => void
@@ -33,7 +32,6 @@ const BLOCK_LABELS: Record<EmailNodeType, string> = {
 }
 
 export default function BaseBlock({
-  id,
   type,
   isEditing,
   onEditToggle,

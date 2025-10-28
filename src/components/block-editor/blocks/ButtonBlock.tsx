@@ -33,7 +33,6 @@ export default function ButtonBlock({
 
   return (
     <BaseBlock
-      id={block.id}
       type="button"
       isEditing={isEditing}
       onEditToggle={onEditToggle}

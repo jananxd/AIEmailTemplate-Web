@@ -45,7 +45,6 @@ export default function TextBlock({
 
   return (
     <BaseBlock
-      id={block.id}
       type="text"
       isEditing={isEditing}
       onEditToggle={onEditToggle}

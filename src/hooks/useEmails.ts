@@ -35,7 +35,7 @@ export function useUpdateEmail() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Email> }) =>
       api.updateEmail(id, data),
-    onSuccess: (response, variables) => {
+    onSuccess: (_response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['emails', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['emails'] })
     },
@@ -66,7 +66,7 @@ export function useRegenerateEmail() {
       prompt: string
       attachedImage?: string
     }) => api.regenerateEmail(id, { prompt, attachedImage }),
-    onSuccess: (response, variables) => {
+    onSuccess: (_response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['emails', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['emails'] })
     },

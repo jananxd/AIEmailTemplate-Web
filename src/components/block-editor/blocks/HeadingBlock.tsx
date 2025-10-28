@@ -50,7 +50,6 @@ export default function HeadingBlock({
 
   return (
     <BaseBlock
-      id={block.id}
       type="heading"
       isEditing={isEditing}
       onEditToggle={onEditToggle}
