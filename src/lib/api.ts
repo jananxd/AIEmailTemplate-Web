@@ -47,10 +47,41 @@ class ApiClient {
 
   // Email endpoints
   async generateEmail(data: GenerateEmailRequest): Promise<{ email: Email }> {
-    return this.request('/emails/generate', {
+    const formData = new FormData()
+    formData.append('prompt', data.prompt)
+
+    if (data.projectId) {
+      formData.append('project_id', data.projectId)
+    }
+
+    if (data.attachedImage) {
+      formData.append('attached_image', data.attachedImage)
+    }
+
+    if (data.userId) {
+      formData.append('user_id', data.userId)
+    }
+
+    // For FormData, we need to remove Content-Type header (browser sets it with boundary)
+    const headers: HeadersInit = {
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+    }
+
+    const response = await fetch(`${this.baseURL}/emails/generate`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      headers,
+      body: formData,
     })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: 'UnknownError',
+        message: 'An unknown error occurred',
+      }))
+      throw error
+    }
+
+    return response.json()
   }
 
   async listEmails(params?: {
