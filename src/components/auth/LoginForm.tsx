@@ -37,7 +37,8 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
       await signInWithOAuth(provider)
       // OAuth redirects, so we don't call onSuccess here
     } catch (err) {
-      setError('Failed to sign in with ' + provider)
+      console.error('OAuth sign-in error:', err)
+      setError(`Failed to sign in with ${provider}`)
       setLoading(false)
     }
   }
