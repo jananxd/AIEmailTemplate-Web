@@ -1,23 +1,49 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import SamplePrompts from '../components/generation/SamplePrompts'
 import GenerationInput from '../components/generation/GenerationInput'
+import { useGenerateEmail } from '../hooks/useEmails'
+import { useProjects } from '../hooks/useProjects'
+import { api } from '../lib/api'
 
 export default function Home() {
+  const navigate = useNavigate()
   const [selectedPrompt, setSelectedPrompt] = useState('')
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+  const generateEmail = useGenerateEmail()
+  const { data: projectsData } = useProjects()
 
-  const handleGenerate = async (prompt: string, image?: File) => {
-    setIsGenerating(true)
+  const projects = projectsData?.projects || []
 
-    // TODO: Call API to generate email
-    console.log('Generating email with prompt:', prompt, 'Image:', image)
+  const handleGenerate = async (prompt: string, imageFile?: File) => {
+    try {
+      let attachedImage: string | undefined
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
+      // Upload image if provided
+      if (imageFile) {
+        const { url } = await api.uploadImage(imageFile)
+        attachedImage = url
+      }
 
-    setIsGenerating(false)
-
-    // TODO: Navigate to email detail page
+      // Generate email
+      generateEmail.mutate(
+        {
+          prompt,
+          projectId: selectedProjectId || undefined,
+          attachedImage,
+          userId: 'current-user', // TODO: Get from auth context
+        },
+        {
+          onSuccess: (response) => {
+            // Navigate to email detail page
+            navigate(`/email/${response.email.id}`)
+          },
+        }
+      )
+    } catch (error) {
+      console.error('Generation failed:', error)
+      alert('Failed to generate email. Please try again.')
+    }
   }
 
   return (
@@ -32,18 +58,45 @@ export default function Home() {
       </div>
 
       <div className="space-y-8">
+        {/* Project Selector */}
+        {projects.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project (optional)
+            </label>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">No project (standalone email)</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <SamplePrompts onSelectPrompt={setSelectedPrompt} />
 
         <GenerationInput
           onGenerate={handleGenerate}
-          isLoading={isGenerating}
+          isLoading={generateEmail.isPending}
           defaultPrompt={selectedPrompt}
         />
 
-        {isGenerating && (
+        {generateEmail.isPending && (
           <div className="text-center py-8">
             <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
             <p className="mt-4 text-gray-600">Generating your email template...</p>
+          </div>
+        )}
+
+        {generateEmail.isError && (
+          <div className="text-center py-4 text-red-600">
+            <p>Failed to generate email. Please try again.</p>
           </div>
         )}
       </div>
