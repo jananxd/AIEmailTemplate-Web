@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import { useAuth } from './useAuth'
 import type { Project } from '../types'
 
 export function useProjects() {
+  const { loading } = useAuth()
+
   return useQuery({
     queryKey: ['projects'],
     queryFn: () => api.listProjects(),
+    enabled: !loading,
   })
 }
 

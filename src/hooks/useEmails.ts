@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import { useAuth } from './useAuth'
 import type { Email, GenerateEmailRequest } from '../types'
 
 export function useEmails(projectId?: string) {
+  const { loading } = useAuth()
+
   return useQuery({
     queryKey: ['emails', projectId],
     queryFn: () => api.listEmails({ projectId }),
+    enabled: !loading,
   })
 }
 
