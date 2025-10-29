@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import type { BrandContext } from '../../types/project'
 import { api } from '../../lib/api'

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Download, Send, RotateCw } from 'lucide-react'
+import { Copy, Download, Send } from 'lucide-react'
 import { useSendTestEmail } from '../../hooks/useEmails'
 import type { Email } from '../../types/email'
 
