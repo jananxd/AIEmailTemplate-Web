@@ -25,8 +25,12 @@ export function useCreateProject() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: Omit<Project, 'id' | 'emailCount' | 'createdAt' | 'updatedAt'>) =>
-      api.createProject(data),
+    mutationFn: (data: {
+      name: string
+      description?: string
+      brandSettings?: Record<string, any>
+      exampleImages?: File[]
+    }) => api.createProject(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
     },

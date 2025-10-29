@@ -31,10 +31,16 @@ export default function ProjectModal({ project, onClose }: ProjectModalProps) {
       )
     } else {
       // Create new project
+      // Transform BrandContext to match API signature
       createProject.mutate(
         {
           name: brandContext.name,
-          brandContext,
+          description: brandContext.description,
+          brandSettings: {
+            logo: brandContext.logo,
+            voiceGuidelines: brandContext.voiceGuidelines,
+            colors: brandContext.colors,
+          },
         },
         {
           onSuccess: () => {

@@ -116,7 +116,7 @@ export default function EmailDetail() {
     )
   }
 
-  if (!data?.email) {
+  if (!data) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -132,7 +132,7 @@ export default function EmailDetail() {
     )
   }
 
-  const email = data.email
+  const email = data
   const blocks = email.jsonStructure.root.children || []
 
   const handleDragEnd = (event: DragEndEvent) => {

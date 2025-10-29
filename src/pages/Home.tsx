@@ -6,7 +6,6 @@ import AuthModal from '../components/auth/AuthModal'
 import { useGenerateEmail } from '../hooks/useEmails'
 import { useProjects } from '../hooks/useProjects'
 import { useAuth } from '../hooks/useAuth'
-import { api } from '../lib/api'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -26,20 +25,12 @@ export default function Home() {
     }
 
     try {
-      let attachedImage: string | undefined
-
-      // Upload image if provided
-      if (imageFile) {
-        const { url } = await api.uploadImage(imageFile)
-        attachedImage = url
-      }
-
-      // Generate email
+      // Generate email with image file directly
       generateEmail.mutate(
         {
           prompt,
           projectId: selectedProjectId || undefined,
-          attachedImage,
+          attachedImage: imageFile,
           userId: user.id,
         },
         {

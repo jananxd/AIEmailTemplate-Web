@@ -29,7 +29,7 @@ export interface UploadedFile {
 export interface GenerateEmailRequest {
   prompt: string
   projectId?: string
-  attachedImage?: string
+  attachedImage?: File
   userId: string
 }
 

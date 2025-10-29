@@ -2,7 +2,6 @@ import type {
   Email,
   Project,
   GenerateEmailRequest,
-  SendTestEmailRequest,
   PaginatedResponse
 } from '../types'
 import { API_BASE_URL } from './config'
@@ -112,7 +111,7 @@ class ApiClient {
     offset?: number
   }): Promise<{ emails: Email[]; pagination: PaginatedResponse<Email>['pagination'] }> {
     const searchParams = new URLSearchParams()
-    if (params?.projectId) searchParams.set('projectId', params.projectId)
+    if (params?.projectId) searchParams.set('project_id', params.projectId)
     if (params?.limit) searchParams.set('limit', params.limit.toString())
     if (params?.offset) searchParams.set('offset', params.offset.toString())
 
@@ -124,14 +123,14 @@ class ApiClient {
     }
   }
 
-  async getEmail(id: string): Promise<{ email: Email }> {
+  async getEmail(id: string): Promise<Email> {
     const email: any = await this.request(`/emails/${id}`)
-    return { email: transformEmailResponse(email) }
+    return transformEmailResponse(email)
   }
 
   async updateEmail(id: string, data: Partial<Email>): Promise<{ email: Email }> {
     return this.request(`/emails/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(data),
     })
   }
@@ -142,33 +141,63 @@ class ApiClient {
     })
   }
 
-  async regenerateEmail(
-    id: string,
-    data: { prompt: string; attachedImage?: string }
-  ): Promise<{ email: Email }> {
-    const json: any = await this.request(`/emails/${id}/regenerate`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
-    return { email: transformEmailResponse(json.email) }
-  }
-
   async sendTestEmail(
     id: string,
-    data: SendTestEmailRequest
+    data: { to: string; variables: Record<string, string> }
   ): Promise<{ success: boolean; message: string }> {
-    return this.request(`/emails/${id}/send-test`, {
+    return this.request(`/emails/${id}/test-send`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        recipient_email: data.to,
+        variables: data.variables,
+      }),
     })
   }
 
   // Project endpoints
-  async createProject(data: Omit<Project, 'id' | 'emailCount' | 'createdAt' | 'updatedAt'>): Promise<{ project: Project }> {
-    return this.request('/projects', {
+  async createProject(data: {
+    name: string
+    description?: string
+    brandSettings?: Record<string, any>
+    exampleImages?: File[]
+  }): Promise<Project> {
+    const formData = new FormData()
+    formData.append('name', data.name)
+
+    if (data.description) {
+      formData.append('description', data.description)
+    }
+
+    if (data.brandSettings) {
+      formData.append('brand_settings', JSON.stringify(data.brandSettings))
+    }
+
+    if (data.exampleImages) {
+      data.exampleImages.forEach(file => {
+        formData.append('example_images', file)
+      })
+    }
+
+    const headers: HeadersInit = {
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+    }
+
+    const response = await fetch(`${this.baseURL}/projects`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      headers,
+      body: formData,
     })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: 'UnknownError',
+        message: 'An unknown error occurred',
+      }))
+      throw error
+    }
+
+    const json = await response.json()
+    return json.project
   }
 
   async listProjects(params?: {
@@ -183,13 +212,13 @@ class ApiClient {
     return this.request(`/projects${query ? `?${query}` : ''}`)
   }
 
-  async getProject(id: string): Promise<{ project: Project }> {
+  async getProject(id: string): Promise<Project> {
     return this.request(`/projects/${id}`)
   }
 
   async updateProject(id: string, data: Partial<Project>): Promise<{ project: Project }> {
     return this.request(`/projects/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(data),
     })
   }
@@ -198,28 +227,6 @@ class ApiClient {
     return this.request(`/projects/${id}?deleteEmails=${deleteEmails}`, {
       method: 'DELETE',
     })
-  }
-
-  // Upload endpoints
-  async uploadImage(file: File): Promise<{ url: string }> {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const headers: HeadersInit = {
-      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
-    }
-
-    const response = await fetch(`${this.baseURL}/uploads/image`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    })
-
-    if (!response.ok) {
-      throw await response.json()
-    }
-
-    return response.json()
   }
 }
 

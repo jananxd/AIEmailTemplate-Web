@@ -57,26 +57,6 @@ export function useDeleteEmail() {
   })
 }
 
-export function useRegenerateEmail() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({
-      id,
-      prompt,
-      attachedImage,
-    }: {
-      id: string
-      prompt: string
-      attachedImage?: string
-    }) => api.regenerateEmail(id, { prompt, attachedImage }),
-    onSuccess: (_response, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['emails', variables.id] })
-      queryClient.invalidateQueries({ queryKey: ['emails'] })
-    },
-  })
-}
-
 export function useSendTestEmail() {
   return useMutation({
     mutationFn: ({

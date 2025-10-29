@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import type { BrandContext } from '../../types/project'
-import { api } from '../../lib/api'
 
 interface BrandContextFormProps {
   initialContext?: BrandContext
@@ -29,22 +28,14 @@ export default function BrandContextForm({
   const [accentColor, setAccentColor] = useState(
     initialContext?.colors.accent || '#F59E0B'
   )
-  const [isUploading, setIsUploading] = useState(false)
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !file.type.startsWith('image/')) return
 
-    setIsUploading(true)
-    try {
-      const { url } = await api.uploadImage(file)
-      setLogo(url)
-    } catch (error) {
-      console.error('Logo upload failed:', error)
-      alert('Failed to upload logo')
-    } finally {
-      setIsUploading(false)
-    }
+    // Create a local preview URL for the uploaded file
+    const previewUrl = URL.createObjectURL(file)
+    setLogo(previewUrl)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -119,13 +110,12 @@ export default function BrandContextForm({
           <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
             <Upload size={24} className="text-gray-400 mb-2" />
             <span className="text-sm text-gray-500">
-              {isUploading ? 'Uploading...' : 'Click to upload logo'}
+              Click to upload logo
             </span>
             <input
               type="file"
               accept="image/*"
               onChange={handleLogoUpload}
-              disabled={isUploading}
               className="hidden"
             />
           </label>
