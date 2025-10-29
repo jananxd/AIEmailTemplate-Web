@@ -22,6 +22,7 @@ import { useEmail, useUpdateEmail } from '../hooks/useEmails'
 import FloatingToolbar from '../components/block-editor/FloatingToolbar'
 import EmailPreview from '../components/email/EmailPreview'
 import VariablePanel from '../components/email/VariablePanel'
+import EmailActions from '../components/email/EmailActions'
 import {
   HeadingBlock,
   TextBlock,
@@ -213,21 +214,24 @@ export default function EmailDetail() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center gap-4">
-          <button
-            onClick={() => navigate('/')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              {email.jsonStructure.meta.subject}
-            </h1>
-            <p className="text-sm text-gray-500">
-              {email.jsonStructure.meta.previewText}
-            </p>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-4 mb-3">
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-1">
+              <h1 className="text-xl font-semibold text-gray-900">
+                {email.jsonStructure.meta.subject}
+              </h1>
+              <p className="text-sm text-gray-500">
+                {email.jsonStructure.meta.previewText}
+              </p>
+            </div>
           </div>
+          <EmailActions email={email} testVariables={testVariables} />
         </div>
       </div>
 
