@@ -20,6 +20,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useEmail, useUpdateEmail } from '../hooks/useEmails'
 import FloatingToolbar from '../components/block-editor/FloatingToolbar'
+import EmailPreview from '../components/email/EmailPreview'
+import VariablePanel from '../components/email/VariablePanel'
 import {
   HeadingBlock,
   TextBlock,
@@ -92,6 +94,8 @@ export default function EmailDetail() {
   const { data, isLoading } = useEmail(id!)
   const updateEmail = useUpdateEmail()
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
+  const [testVariables, setTestVariables] = useState<Record<string, string>>({})
+  const [showPreview, setShowPreview] = useState(true)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -227,44 +231,85 @@ export default function EmailDetail() {
         </div>
       </div>
 
-      {/* Editor Area */}
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={blocks.map((b) => b.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-4">
-              {blocks.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p>No blocks yet. Use the toolbar below to add content.</p>
+      {/* Split-Pane Editor/Preview */}
+      <div className="flex h-[calc(100vh-80px)]">
+        {/* Left: Block Editor */}
+        <div className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="max-w-3xl mx-auto">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={blocks.map((b) => b.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-4">
+                  {blocks.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <p>No blocks yet. Use the toolbar below to add content.</p>
+                    </div>
+                  ) : (
+                    blocks.map((block) => (
+                      <SortableBlock
+                        key={block.id}
+                        block={block}
+                        isEditing={editingBlockId === block.id}
+                        onUpdate={(updates) => handleUpdateBlock(block.id, updates)}
+                        onDelete={() => handleDeleteBlock(block.id)}
+                        onEditToggle={() =>
+                          setEditingBlockId(
+                            editingBlockId === block.id ? null : block.id
+                          )
+                        }
+                      />
+                    ))
+                  )}
                 </div>
-              ) : (
-                blocks.map((block) => (
-                  <SortableBlock
-                    key={block.id}
-                    block={block}
-                    isEditing={editingBlockId === block.id}
-                    onUpdate={(updates) => handleUpdateBlock(block.id, updates)}
-                    onDelete={() => handleDeleteBlock(block.id)}
-                    onEditToggle={() =>
-                      setEditingBlockId(
-                        editingBlockId === block.id ? null : block.id
-                      )
-                    }
-                  />
-                ))
-              )}
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
+
+        {/* Right: Preview */}
+        {showPreview && (
+          <div className="w-1/2 border-l border-gray-200 bg-gray-100 overflow-y-auto p-6">
+            <div className="max-w-2xl mx-auto space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Preview</h2>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Hide Preview
+                </button>
+              </div>
+
+              <VariablePanel
+                blocks={blocks}
+                onVariablesChange={setTestVariables}
+              />
+
+              <EmailPreview
+                blocks={blocks}
+                variables={testVariables}
+              />
             </div>
-          </SortableContext>
-        </DndContext>
+          </div>
+        )}
+
+        {/* Toggle Preview Button (when hidden) */}
+        {!showPreview && (
+          <button
+            onClick={() => setShowPreview(true)}
+            className="fixed right-4 top-24 px-3 py-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700"
+          >
+            Show Preview
+          </button>
+        )}
       </div>
 
-      {/* Floating Toolbar */}
       <FloatingToolbar onAddBlock={handleAddBlock} />
     </div>
   )
