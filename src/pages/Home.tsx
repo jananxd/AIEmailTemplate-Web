@@ -2,20 +2,29 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SamplePrompts from '../components/generation/SamplePrompts'
 import GenerationInput from '../components/generation/GenerationInput'
+import AuthModal from '../components/auth/AuthModal'
 import { useGenerateEmail } from '../hooks/useEmails'
 import { useProjects } from '../hooks/useProjects'
+import { useAuth } from '../hooks/useAuth'
 import { api } from '../lib/api'
 
 export default function Home() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [selectedPrompt, setSelectedPrompt] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const generateEmail = useGenerateEmail()
   const { data: projectsData } = useProjects()
 
   const projects = projectsData?.projects || []
 
   const handleGenerate = async (prompt: string, imageFile?: File) => {
+    if (!user) {
+      setIsAuthModalOpen(true)
+      return
+    }
+
     try {
       let attachedImage: string | undefined
 
@@ -31,7 +40,7 @@ export default function Home() {
           prompt,
           projectId: selectedProjectId || undefined,
           attachedImage,
-          userId: 'current-user', // TODO: Get from auth context
+          userId: user.id,
         },
         {
           onSuccess: (response) => {
@@ -85,6 +94,7 @@ export default function Home() {
           onGenerate={handleGenerate}
           isLoading={generateEmail.isPending}
           defaultPrompt={selectedPrompt}
+          onAuthRequired={() => setIsAuthModalOpen(true)}
         />
 
         {generateEmail.isPending && (
@@ -100,6 +110,11 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   )
 }
