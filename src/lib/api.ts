@@ -154,6 +154,126 @@ class ApiClient {
     })
   }
 
+  /**
+   * Generate email with real-time progress updates via Server-Sent Events
+   * Uses fetch + ReadableStream to support POST with multipart form data
+   *
+   * @param data - Generation request data
+   * @param callbacks - Progress, success, and error handlers
+   * @returns AbortController (can be used to cancel)
+   */
+  async generateEmailStream(
+    data: GenerateEmailRequest,
+    callbacks: {
+      onProgress: (step: string, message: string) => void
+      onSuccess: (email: Email) => void
+      onError: (error: string, details?: string) => void
+    }
+  ): Promise<AbortController> {
+    // Build FormData
+    const formData = new FormData()
+    formData.append('prompt', data.prompt)
+
+    if (data.projectId) {
+      formData.append('project_id', data.projectId)
+    }
+
+    if (data.attachedImage) {
+      formData.append('reference_image', data.attachedImage)
+    }
+
+    if (data.userId) {
+      formData.append('user_id', data.userId)
+    }
+
+    // Create AbortController for cancellation
+    const abortController = new AbortController()
+
+    try {
+      const response = await fetch(`${this.baseURL}/emails/generate/stream`, {
+        method: 'POST',
+        headers: {
+          ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+          // Don't set Content-Type - browser will set it with boundary for FormData
+        },
+        body: formData,
+        signal: abortController.signal,
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          error: 'UnknownError',
+          message: 'An unknown error occurred',
+        }))
+        callbacks.onError(error.error, error.message)
+        return abortController
+      }
+
+      // Read SSE stream
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        callbacks.onError('No response body')
+        return abortController
+      }
+
+      // Process stream
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) break
+
+        // Decode chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true })
+
+        // Process complete SSE messages
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6) // Remove 'data: ' prefix
+
+            try {
+              const event = JSON.parse(data)
+
+              switch (event.type) {
+                case 'progress':
+                  callbacks.onProgress(event.step, event.message)
+                  break
+
+                case 'success':
+                  callbacks.onSuccess(transformEmailResponse(event.email))
+                  break
+
+                case 'error':
+                  callbacks.onError(event.error, event.details)
+                  break
+              }
+            } catch (error) {
+              console.error('[SSE] Failed to parse event:', error, data)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          callbacks.onError('Generation cancelled')
+        } else {
+          callbacks.onError('Connection error', error.message)
+        }
+      } else {
+        callbacks.onError('Unknown error')
+      }
+    }
+
+    return abortController
+  }
+
   // Project endpoints
   async createProject(data: {
     name: string
