@@ -2,20 +2,26 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SamplePrompts from '../components/generation/SamplePrompts'
 import GenerationInput from '../components/generation/GenerationInput'
+import GenerationProgress from '../components/generation/GenerationProgress'
 import AuthModal from '../components/auth/AuthModal'
-import { useGenerateEmail } from '../hooks/useEmails'
 import { useProjects } from '../hooks/useProjects'
 import { useAuth } from '../hooks/useAuth'
+import { api } from '../lib/api'
 
 export default function Home() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [selectedPrompt, setSelectedPrompt] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [progressStep, setProgressStep] = useState('')
+  const [progressMessage, setProgressMessage] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [abortController, setAbortController] = useState<AbortController | null>(null)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const generateEmail = useGenerateEmail()
-  const { data: projectsData } = useProjects()
+  const generateEmail = { isPending: isGenerating }
 
+  const { data: projectsData } = useProjects()
   const projects = projectsData?.projects || []
 
   const handleGenerate = async (prompt: string, imageFile?: File) => {
@@ -24,9 +30,13 @@ export default function Home() {
       return
     }
 
+    setIsGenerating(true)
+    setError(null)
+    setProgressStep('validating')
+    setProgressMessage('Starting generation...')
+
     try {
-      // Generate email with image file directly
-      generateEmail.mutate(
+      const controller = await api.generateEmailStream(
         {
           prompt,
           projectId: selectedProjectId || undefined,
@@ -34,16 +44,49 @@ export default function Home() {
           userId: user.id,
         },
         {
-          onSuccess: (response) => {
-            // Navigate to email detail page
-            navigate(`/email/${response.email.id}`)
+          onProgress: (step, message) => {
+            setProgressStep(step)
+            setProgressMessage(message)
+          },
+          onSuccess: (email) => {
+            // Success! Navigate to email detail page
+            navigate(`/email/${email.id}`)
+          },
+          onError: (error, details) => {
+            console.error('Generation failed:', error, details)
+            setError(details || error)
+            setProgressStep('error')
+            setProgressMessage('Generation failed. Please try again.')
+            setIsGenerating(false)
           },
         }
       )
-    } catch (error) {
-      console.error('Generation failed:', error)
-      alert('Failed to generate email. Please try again.')
+
+      setAbortController(controller)
+    } catch (err) {
+      console.error('Generation failed:', err)
+      setError(err instanceof Error ? err.message : 'Failed to generate email')
+      setProgressStep('error')
+      setProgressMessage('Generation failed. Please try again.')
+      setIsGenerating(false)
     }
+  }
+
+  const handleCancel = () => {
+    if (abortController) {
+      abortController.abort()
+      setAbortController(null)
+    }
+    setIsGenerating(false)
+    setProgressStep('')
+    setProgressMessage('')
+    setError(null)
+  }
+
+  const handleRetry = () => {
+    setError(null)
+    setProgressStep('')
+    setProgressMessage('')
   }
 
   return (
@@ -59,7 +102,7 @@ export default function Home() {
 
       <div className="space-y-8">
         {/* Project Selector */}
-        {projects.length > 0 && (
+        {projects.length > 0 && !isGenerating && !error && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Project (optional)
@@ -79,25 +122,40 @@ export default function Home() {
           </div>
         )}
 
-        <SamplePrompts onSelectPrompt={setSelectedPrompt} />
-
-        <GenerationInput
-          onGenerate={handleGenerate}
-          isLoading={generateEmail.isPending}
-          defaultPrompt={selectedPrompt}
-          onAuthRequired={() => setIsAuthModalOpen(true)}
-        />
-
-        {generateEmail.isPending && (
-          <div className="text-center py-8">
-            <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <p className="mt-4 text-gray-600">Generating your email template...</p>
-          </div>
+        {/* Generation Input */}
+        {!isGenerating && !error && (
+          <>
+            <SamplePrompts onSelectPrompt={setSelectedPrompt} />
+            <GenerationInput
+              onGenerate={handleGenerate}
+              isLoading={generateEmail.isPending}
+              defaultPrompt={selectedPrompt}
+              onAuthRequired={() => setIsAuthModalOpen(true)}
+            />
+          </>
         )}
 
-        {generateEmail.isError && (
-          <div className="text-center py-4 text-red-600">
-            <p>Failed to generate email. Please try again.</p>
+        {/* Progress Indicator */}
+        {isGenerating && (
+          <GenerationProgress
+            step={progressStep}
+            message={progressMessage}
+            status="loading"
+            onCancel={handleCancel}
+          />
+        )}
+
+        {/* Error Display */}
+        {error && !isGenerating && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800 font-medium">Generation Failed</p>
+            <p className="text-red-600 text-sm mt-1">{error}</p>
+            <button
+              onClick={handleRetry}
+              className="mt-3 text-sm text-red-600 hover:text-red-700 font-medium"
+            >
+              Try Again
+            </button>
           </div>
         )}
       </div>
