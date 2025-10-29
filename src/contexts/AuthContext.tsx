@@ -1,5 +1,6 @@
 import { createContext, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
+import { api } from '../lib/api'
 import type { User, AuthProvider } from '../types/auth'
 import type { Session } from '@supabase/supabase-js'
 
@@ -27,7 +28,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session ? mapSessionToUser(session) : null)
+      if (session) {
+        setUser(mapSessionToUser(session))
+        api.setToken(session.access_token)
+      } else {
+        setUser(null)
+        api.setToken('')
+      }
       setLoading(false)
     })
 
@@ -35,7 +42,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session ? mapSessionToUser(session) : null)
+      if (session) {
+        setUser(mapSessionToUser(session))
+        api.setToken(session.access_token)
+      } else {
+        setUser(null)
+        api.setToken('')
+      }
       setLoading(false)
     })
 
