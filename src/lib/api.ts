@@ -7,6 +7,24 @@ import type {
 } from '../types'
 import { API_BASE_URL } from './config'
 
+// Transform backend snake_case response to frontend camelCase Email type
+function transformEmailResponse(backendEmail: any): Email {
+  return {
+    id: backendEmail.id,
+    meta: {
+      subject: backendEmail.subject || '',
+      previewText: backendEmail.preview || '',
+    },
+    jsonStructure: backendEmail.json_state,
+    variables: backendEmail.variables || [],
+    prompt: backendEmail.prompt || '',
+    attachedImage: backendEmail.attached_image,
+    projectId: backendEmail.project_id,
+    createdAt: backendEmail.created_at,
+    updatedAt: backendEmail.updated_at,
+  }
+}
+
 class ApiClient {
   private baseURL: string
   private token: string | null = null
@@ -46,7 +64,7 @@ class ApiClient {
   }
 
   // Email endpoints
-  async generateEmail(data: GenerateEmailRequest): Promise<{ email: Email }> {
+  async generateEmail(data: GenerateEmailRequest): Promise<{ email: Email; generated?: boolean }> {
     const formData = new FormData()
     formData.append('prompt', data.prompt)
 
@@ -81,7 +99,11 @@ class ApiClient {
       throw error
     }
 
-    return response.json()
+    const json = await response.json()
+    return {
+      email: transformEmailResponse(json.email),
+      generated: json.generated,
+    }
   }
 
   async listEmails(params?: {
@@ -95,11 +117,16 @@ class ApiClient {
     if (params?.offset) searchParams.set('offset', params.offset.toString())
 
     const query = searchParams.toString()
-    return this.request(`/emails${query ? `?${query}` : ''}`)
+    const json: any = await this.request(`/emails${query ? `?${query}` : ''}`)
+    return {
+      emails: json.emails.map(transformEmailResponse),
+      pagination: json.pagination,
+    }
   }
 
   async getEmail(id: string): Promise<{ email: Email }> {
-    return this.request(`/emails/${id}`)
+    const email: any = await this.request(`/emails/${id}`)
+    return { email: transformEmailResponse(email) }
   }
 
   async updateEmail(id: string, data: Partial<Email>): Promise<{ email: Email }> {
@@ -119,10 +146,11 @@ class ApiClient {
     id: string,
     data: { prompt: string; attachedImage?: string }
   ): Promise<{ email: Email }> {
-    return this.request(`/emails/${id}/regenerate`, {
+    const json: any = await this.request(`/emails/${id}/regenerate`, {
       method: 'POST',
       body: JSON.stringify(data),
     })
+    return { email: transformEmailResponse(json.email) }
   }
 
   async sendTestEmail(
