@@ -147,6 +147,21 @@ export default function EmailDetail() {
     )
   }
 
+  // If no data but we're generating, show generation progress
+  // This handles the case where email doesn't exist yet (404) but generation is in progress
+  if (!data && !isLoading && isGenerating && generationState) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <GenerationProgress
+          step={generationState.step}
+          message={generationState.message}
+          status="loading"
+          onCancel={handleCancelGeneration}
+        />
+      </div>
+    )
+  }
+
   if (!data) {
     return (
       <div className="flex items-center justify-center h-screen">

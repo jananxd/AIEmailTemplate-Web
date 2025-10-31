@@ -74,7 +74,7 @@ export const useGenerationStore = create<GenerationStore>((set, get) => ({
     }
   },
 
-  completeGeneration: (id) => {
+  completeGeneration: (id, _email) => {
     const { generations } = get()
     const gen = generations.get(id)
 
@@ -86,6 +86,12 @@ export const useGenerationStore = create<GenerationStore>((set, get) => ({
 
       // Clean up localStorage
       localStorage.removeItem(`generation_${id}`)
+
+      // Invalidate email query to trigger refetch
+      // Import and use queryClient to invalidate the query
+      import('../providers/QueryProvider').then(({ queryClient }) => {
+        queryClient.invalidateQueries({ queryKey: ['emails', id] })
+      })
 
       // Remove from store after 2 seconds
       setTimeout(() => {

@@ -18,6 +18,7 @@ export function useEmail(id: string) {
     queryKey: ['emails', id],
     queryFn: () => api.getEmail(id),
     enabled: !!id,
+    retry: false, // Don't retry 404s - email might be generating
   })
 }
 
