@@ -12,6 +12,7 @@ export interface GenerationState {
   error?: string
   abortController?: AbortController
   createdAt: number
+  toastId?: string | number
 }
 
 interface GenerationStore {
@@ -25,6 +26,7 @@ interface GenerationStore {
   cancelGeneration: (id: string) => void
   removeGeneration: (id: string) => void
   setAbortController: (id: string, controller: AbortController) => void
+  setToastId: (id: string, toastId: string | number) => void
 
   // Computed
   getInProgressCount: () => number
@@ -141,6 +143,16 @@ export const useGenerationStore = create<GenerationStore>((set, get) => ({
 
     if (gen) {
       gen.abortController = controller
+      set({ generations: new Map(generations) })
+    }
+  },
+
+  setToastId: (id, toastId) => {
+    const { generations } = get()
+    const gen = generations.get(id)
+
+    if (gen) {
+      gen.toastId = toastId
       set({ generations: new Map(generations) })
     }
   },
