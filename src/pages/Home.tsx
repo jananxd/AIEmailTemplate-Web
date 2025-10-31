@@ -14,10 +14,8 @@ export default function Home() {
   const { user } = useAuth()
   const [selectedPrompt, setSelectedPrompt] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string>('')
-  const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
-  const generateEmail = { isPending: isGenerating }
 
   const { data: projectsData } = useProjects()
   const projects = projectsData?.projects || []
@@ -37,7 +35,6 @@ export default function Home() {
       return
     }
 
-    setIsGenerating(true)
     setError(null)
 
     try {
@@ -57,7 +54,6 @@ export default function Home() {
     } catch (err) {
       console.error('Generation failed:', err)
       setError(err instanceof Error ? err.message : 'Failed to start email generation')
-      setIsGenerating(false)
     }
   }
 
@@ -114,7 +110,7 @@ export default function Home() {
             <SamplePrompts onSelectPrompt={setSelectedPrompt} />
             <GenerationInput
               onGenerate={handleGenerate}
-              isLoading={!canGenerate || generateEmail.isPending}
+              isLoading={!canGenerate}
               defaultPrompt={selectedPrompt}
               onAuthRequired={() => setIsAuthModalOpen(true)}
             />
