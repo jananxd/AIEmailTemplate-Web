@@ -34,6 +34,9 @@ import {
 } from '../components/block-editor/blocks'
 import type { EmailNode } from '../types/email'
 import { generateId } from '../lib/utils'
+import { useGenerationStore } from '../store/generationStore'
+import GenerationProgress from '../components/generation/GenerationProgress'
+import { generationManager } from '../lib/generationManager'
 
 const blockComponents = {
   heading: HeadingBlock,
@@ -98,12 +101,40 @@ export default function EmailDetail() {
   const [testVariables, setTestVariables] = useState<Record<string, string>>({})
   const [showPreview, setShowPreview] = useState(true)
 
+  // Subscribe to generation state
+  const generationState = useGenerationStore((state) =>
+    state.generations.get(id!)
+  )
+
+  const isGenerating = generationState?.status === 'generating'
+
+  const handleCancelGeneration = () => {
+    if (id) {
+      generationManager.cancelGeneration(id)
+      navigate('/')
+    }
+  }
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
+
+  // Show generation progress if generating
+  if (isGenerating && generationState) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-12">
+        <GenerationProgress
+          step={generationState.step}
+          message={generationState.message}
+          status="loading"
+          onCancel={handleCancelGeneration}
+        />
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (
