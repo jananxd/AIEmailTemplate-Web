@@ -111,17 +111,6 @@ export default function EmailDetail() {
 
   const isGenerating = generationState?.status === 'generating' || hasGenerationInLocalStorage
 
-  // Debug logging
-  console.log('EmailDetail Debug:', {
-    id,
-    isGenerating,
-    hasGenerationState: !!generationState,
-    hasLocalStorage: hasGenerationInLocalStorage,
-    isLoading,
-    hasData: !!data,
-    generationStatus: generationState?.status,
-  })
-
   const handleCancelGeneration = () => {
     if (id) {
       generationManager.cancelGeneration(id)
