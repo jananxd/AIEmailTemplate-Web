@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { v4 as uuidv4 } from 'uuid'
 import SamplePrompts from '../components/generation/SamplePrompts'
 import GenerationInput from '../components/generation/GenerationInput'
@@ -9,6 +10,7 @@ import { useGenerationStore } from '../store/generationStore'
 import { generationManager } from '../lib/generationManager'
 
 export default function Home() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [selectedPrompt, setSelectedPrompt] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string>('')
@@ -40,12 +42,16 @@ export default function Home() {
       const emailId = uuidv4()
 
       // Start background generation
-      await generationManager.startGeneration(emailId, {
-        prompt,
-        projectId: selectedProjectId || undefined,
-        attachedImage: imageFile,
-        userId: user.id,
-      })
+      await generationManager.startGeneration(
+        emailId,
+        {
+          prompt,
+          projectId: selectedProjectId || undefined,
+          attachedImage: imageFile,
+          userId: user.id,
+        },
+        (id) => navigate(`/email/${id}`)
+      )
 
       // Navigation removed - user stays on Home page
       // Toast will show progress and "View Email" button when done

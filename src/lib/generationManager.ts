@@ -20,7 +20,8 @@ class GenerationManager {
 
   async startGeneration(
     emailId: string,
-    request: GenerateEmailRequest
+    request: GenerateEmailRequest,
+    onSuccessNavigate?: (emailId: string) => void
   ): Promise<void> {
     const store = useGenerationStore.getState()
 
@@ -70,8 +71,12 @@ class GenerationManager {
               action: {
                 label: 'View Email',
                 onClick: () => {
-                  // Will add navigation helper in next step
-                  window.location.href = `/email/${emailId}`
+                  if (onSuccessNavigate) {
+                    onSuccessNavigate(emailId)
+                  } else {
+                    // Fallback to window.location if callback not provided
+                    window.location.href = `/email/${emailId}`
+                  }
                 }
               }
             })
