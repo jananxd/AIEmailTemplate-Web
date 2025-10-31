@@ -1,6 +1,7 @@
 import { api } from './api'
 import { useGenerationStore } from '../store/generationStore'
 import type { GenerateEmailRequest } from '../types'
+import { toast } from 'sonner'
 
 class GenerationManager {
   private static instance: GenerationManager
@@ -36,17 +37,58 @@ class GenerationManager {
       userId: request.userId,
     })
 
+    // Create loading toast
+    const toastId = toast.loading('Validating inputs...', {
+      description: 'Starting email generation',
+    })
+
+    // Store toast ID in generation state
+    store.setToastId(emailId, toastId)
+
     try {
       // Start SSE stream
       const abortController = await api.generateEmailStream(request, {
         onProgress: (step, message) => {
           store.updateProgress(emailId, step, message)
+
+          // Update toast with progress
+          const gen = store.generations.get(emailId)
+          if (gen?.toastId) {
+            toast.loading(message, { id: gen.toastId, description: step })
+          }
         },
         onSuccess: (email) => {
           store.completeGeneration(emailId, email)
+
+          // Show success toast with action button
+          const gen = store.generations.get(emailId)
+          if (gen?.toastId) {
+            toast.success('Email generated successfully!', {
+              id: gen.toastId,
+              description: email.meta.subject,
+              duration: 8000,
+              action: {
+                label: 'View Email',
+                onClick: () => {
+                  // Will add navigation helper in next step
+                  window.location.href = `/email/${emailId}`
+                }
+              }
+            })
+          }
         },
         onError: (error, details) => {
           store.failGeneration(emailId, details || error)
+
+          // Show error toast
+          const gen = store.generations.get(emailId)
+          if (gen?.toastId) {
+            toast.error('Generation failed', {
+              id: gen.toastId,
+              description: details || error,
+              duration: 8000,
+            })
+          }
         },
       })
 
