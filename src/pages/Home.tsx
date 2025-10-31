@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { v4 as uuidv4 } from 'uuid'
 import SamplePrompts from '../components/generation/SamplePrompts'
 import GenerationInput from '../components/generation/GenerationInput'
@@ -10,7 +9,6 @@ import { useGenerationStore } from '../store/generationStore'
 import { generationManager } from '../lib/generationManager'
 
 export default function Home() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [selectedPrompt, setSelectedPrompt] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string>('')
@@ -49,8 +47,8 @@ export default function Home() {
         userId: user.id,
       })
 
-      // Navigate immediately (non-blocking)
-      navigate(`/email/${emailId}`)
+      // Navigation removed - user stays on Home page
+      // Toast will show progress and "View Email" button when done
     } catch (err) {
       console.error('Generation failed:', err)
       setError(err instanceof Error ? err.message : 'Failed to start email generation')
