@@ -106,7 +106,21 @@ export default function EmailDetail() {
     id ? state.generations.get(id) : undefined
   )
 
-  const isGenerating = generationState?.status === 'generating'
+  // Check localStorage as fallback for generation state
+  const hasGenerationInLocalStorage = id ? !!localStorage.getItem(`generation_${id}`) : false
+
+  const isGenerating = generationState?.status === 'generating' || hasGenerationInLocalStorage
+
+  // Debug logging
+  console.log('EmailDetail Debug:', {
+    id,
+    isGenerating,
+    hasGenerationState: !!generationState,
+    hasLocalStorage: hasGenerationInLocalStorage,
+    isLoading,
+    hasData: !!data,
+    generationStatus: generationState?.status,
+  })
 
   const handleCancelGeneration = () => {
     if (id) {
@@ -122,13 +136,13 @@ export default function EmailDetail() {
     })
   )
 
-  // Show generation progress if generating
-  if (isGenerating && generationState) {
+  // PRIORITY 1: Show generation progress if generating (check both Zustand and localStorage)
+  if (isGenerating && !data) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-12">
         <GenerationProgress
-          step={generationState.step}
-          message={generationState.message}
+          step={generationState?.step || 'starting'}
+          message={generationState?.message || 'Starting generation...'}
           status="loading"
           onCancel={handleCancelGeneration}
         />
@@ -136,6 +150,7 @@ export default function EmailDetail() {
     )
   }
 
+  // PRIORITY 2: Show loading spinner while fetching email
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -147,21 +162,7 @@ export default function EmailDetail() {
     )
   }
 
-  // If no data but we're generating, show generation progress
-  // This handles the case where email doesn't exist yet (404) but generation is in progress
-  if (!data && !isLoading && isGenerating && generationState) {
-    return (
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <GenerationProgress
-          step={generationState.step}
-          message={generationState.message}
-          status="loading"
-          onCancel={handleCancelGeneration}
-        />
-      </div>
-    )
-  }
-
+  // PRIORITY 3: Show "Email not found" only if not generating
   if (!data) {
     return (
       <div className="flex items-center justify-center h-screen">
