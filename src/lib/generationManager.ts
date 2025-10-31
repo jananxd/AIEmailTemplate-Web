@@ -41,6 +41,13 @@ class GenerationManager {
     // Create loading toast
     const toastId = toast.loading('Validating inputs...', {
       description: 'Starting email generation',
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {
+          this.cancelGeneration(emailId)
+          toast.error('Generation cancelled', { id: toastId })
+        }
+      }
     })
 
     // Store toast ID in generation state
@@ -55,7 +62,17 @@ class GenerationManager {
           // Update toast with progress
           const gen = store.generations.get(emailId)
           if (gen?.toastId) {
-            toast.loading(message, { id: gen.toastId, description: step })
+            toast.loading(message, {
+              id: gen.toastId,
+              description: step,
+              cancel: {
+                label: 'Cancel',
+                onClick: () => {
+                  this.cancelGeneration(emailId)
+                  toast.error('Generation cancelled', { id: gen.toastId })
+                }
+              }
+            })
           }
         },
         onSuccess: (email) => {
