@@ -50,10 +50,7 @@ class GenerationManager {
       })
 
       // Store abort controller
-      const gen = store.generations.get(emailId)
-      if (gen) {
-        gen.abortController = abortController
-      }
+      store.setAbortController(emailId, abortController)
     } catch (error) {
       store.failGeneration(
         emailId,

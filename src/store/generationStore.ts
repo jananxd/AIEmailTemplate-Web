@@ -24,6 +24,7 @@ interface GenerationStore {
   failGeneration: (id: string, error: string) => void
   cancelGeneration: (id: string) => void
   removeGeneration: (id: string) => void
+  setAbortController: (id: string, controller: AbortController) => void
 
   // Computed
   getInProgressCount: () => number
@@ -126,6 +127,16 @@ export const useGenerationStore = create<GenerationStore>((set, get) => ({
     const { generations } = get()
     generations.delete(id)
     set({ generations: new Map(generations) })
+  },
+
+  setAbortController: (id, controller) => {
+    const { generations } = get()
+    const gen = generations.get(id)
+
+    if (gen) {
+      gen.abortController = controller
+      set({ generations: new Map(generations) })
+    }
   },
 
   getInProgressCount: () => {
