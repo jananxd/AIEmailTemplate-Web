@@ -103,7 +103,7 @@ export default function EmailDetail() {
 
   // Subscribe to generation state
   const generationState = useGenerationStore((state) =>
-    state.generations.get(id!)
+    id ? state.generations.get(id) : undefined
   )
 
   const isGenerating = generationState?.status === 'generating'
