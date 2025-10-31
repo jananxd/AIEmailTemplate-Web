@@ -20,8 +20,11 @@ export default function Home() {
   const { data: projectsData } = useProjects()
   const projects = projectsData?.projects || []
 
-  const canGenerate = useGenerationStore((state) => state.canStartNewGeneration())
-  const inProgressCount = useGenerationStore((state) => state.getInProgressCount())
+  // Compute derived state directly in selector to avoid infinite loop
+  const inProgressCount = useGenerationStore((state) =>
+    Array.from(state.generations.values()).filter(g => g.status === 'generating').length
+  )
+  const canGenerate = inProgressCount < 3
 
   const handleGenerate = async (prompt: string, imageFile?: File) => {
     if (!user) {

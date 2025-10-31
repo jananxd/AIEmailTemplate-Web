@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useEmails, useDeleteEmail } from '../../hooks/useEmails'
 import EmailListItem from './EmailListItem'
 import { useGenerationStore } from '../../store/generationStore'
@@ -11,15 +12,27 @@ export default function EmailList({ projectId }: EmailListProps) {
   const { data, isLoading } = useEmails(projectId)
   const deleteEmail = useDeleteEmail()
 
-  // Get in-progress generations
-  const generations = useGenerationStore((state) =>
-    Array.from(state.generations.values())
-  )
+  // Get in-progress generation IDs only (stable primitive values)
+  // This prevents infinite loop by returning a stable string instead of new arrays/objects
+  const inProgressIds = useGenerationStore((state) => {
+    const generating = Array.from(state.generations.values())
+      .filter(gen => gen.status === 'generating')
+      .map(gen => gen.id)
+    // Return a stable string representation for comparison
+    return generating.join(',')
+  })
 
   // Create phantom emails for in-progress generations
-  const phantomEmails = generations
-    .filter(gen => gen.status === 'generating')
-    .map(gen => createPhantomEmail(gen))
+  // Fetch data directly from store to avoid subscribing to Map reference
+  const phantomEmails = useMemo(() => {
+    if (!inProgressIds) return []
+    const ids = inProgressIds.split(',').filter(Boolean)
+    const store = useGenerationStore.getState()
+    return ids
+      .map(id => store.generations.get(id))
+      .filter((gen): gen is NonNullable<typeof gen> => gen !== undefined)
+      .map(gen => createPhantomEmail(gen))
+  }, [inProgressIds])
 
   if (isLoading) {
     return (
