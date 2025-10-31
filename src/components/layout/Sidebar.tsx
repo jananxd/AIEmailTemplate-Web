@@ -5,9 +5,12 @@ import SidebarHeader from './SidebarHeader'
 import EmailList from '../sidebar/EmailList'
 import ProjectList from '../sidebar/ProjectList'
 import ProjectModal from '../project/ProjectModal'
+import UserMenu from '../auth/UserMenu'
+import { useAuth } from '../../hooks/useAuth'
 import type { Project } from '../../types/project'
 
 export default function Sidebar() {
+  const { user, loading } = useAuth()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [showProjectModal, setShowProjectModal] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
@@ -29,12 +32,12 @@ export default function Sidebar() {
 
   if (isCollapsed) {
     return (
-      <aside className="w-16 bg-white border-r border-gray-200 transition-all duration-300">
+      <aside className="w-16 bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-screen">
         <SidebarHeader
           isCollapsed={isCollapsed}
           onToggle={() => setIsCollapsed(!isCollapsed)}
         />
-        <nav className="p-2">
+        <nav className="p-2 flex-1">
           <NavLink
             to="/"
             className={({ isActive }) =>
@@ -49,6 +52,13 @@ export default function Sidebar() {
             <Home size={20} />
           </NavLink>
         </nav>
+
+        {/* User menu at bottom */}
+        {!loading && user && (
+          <div className="p-2 border-t border-gray-200">
+            <UserMenu sidebarCollapsed={true} />
+          </div>
+        )}
       </aside>
     )
   }
@@ -91,6 +101,13 @@ export default function Sidebar() {
           onCreateProject={handleCreateProject}
         />
       </nav>
+
+      {/* User menu at bottom */}
+      {!loading && user && (
+        <div className="p-4 border-t border-gray-200">
+          <UserMenu sidebarCollapsed={false} />
+        </div>
+      )}
 
       {showProjectModal && (
         <ProjectModal

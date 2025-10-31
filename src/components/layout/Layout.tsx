@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { LogIn, UserPlus } from 'lucide-react'
 import Sidebar from './Sidebar'
-import UserMenu from '../auth/UserMenu'
 import AuthModal from '../auth/AuthModal'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -42,13 +41,6 @@ export default function Layout({ children }: LayoutProps) {
         <main className="flex-1 overflow-auto">
           {children}
         </main>
-
-        {/* User menu in bottom left */}
-        {!loading && user && (
-          <div className="px-4 py-3 bg-white border-t border-gray-200">
-            <UserMenu />
-          </div>
-        )}
       </div>
 
       <AuthModal
