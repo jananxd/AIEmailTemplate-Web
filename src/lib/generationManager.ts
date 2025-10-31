@@ -4,6 +4,7 @@ import type { GenerateEmailRequest } from '../types'
 
 class GenerationManager {
   private static instance: GenerationManager
+  private isRecovering = false
 
   private constructor() {
     // Private constructor for singleton
@@ -66,27 +67,37 @@ class GenerationManager {
   }
 
   async recoverGenerations(): Promise<void> {
-    // Check localStorage for in-progress generations
-    const keys = Object.keys(localStorage).filter(k => k.startsWith('generation_'))
+    // Prevent concurrent recovery calls (e.g., from StrictMode double-invocation)
+    if (this.isRecovering) {
+      return
+    }
 
-    for (const key of keys) {
-      try {
-        const data = JSON.parse(localStorage.getItem(key) || '{}')
-        const emailId = data.id
+    this.isRecovering = true
+    try {
+      // Check localStorage for in-progress generations
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('generation_'))
 
-        // Check if email exists in backend (was it completed?)
+      for (const key of keys) {
         try {
-          await api.getEmail(emailId)
-          // Email exists, generation completed - clean up
-          localStorage.removeItem(key)
-        } catch {
-          // Email doesn't exist - generation was interrupted
-          // Could attempt to reconnect here, but for now just clean up
-          localStorage.removeItem(key)
+          const data = JSON.parse(localStorage.getItem(key) || '{}')
+          const emailId = data.id
+
+          // Check if email exists in backend (was it completed?)
+          try {
+            await api.getEmail(emailId)
+            // Email exists, generation completed - clean up
+            localStorage.removeItem(key)
+          } catch {
+            // Email doesn't exist - generation was interrupted
+            // Could attempt to reconnect here, but for now just clean up
+            localStorage.removeItem(key)
+          }
+        } catch (error) {
+          console.error('Failed to recover generation:', error)
         }
-      } catch (error) {
-        console.error('Failed to recover generation:', error)
       }
+    } finally {
+      this.isRecovering = false
     }
   }
 }
