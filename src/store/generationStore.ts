@@ -76,7 +76,7 @@ export const useGenerationStore = create<GenerationStore>((set, get) => ({
     }
   },
 
-  completeGeneration: (id, _email) => {
+  completeGeneration: (id, email) => {
     const { generations } = get()
     const gen = generations.get(id)
 
@@ -89,15 +89,16 @@ export const useGenerationStore = create<GenerationStore>((set, get) => ({
       // Clean up localStorage
       localStorage.removeItem(`generation_${id}`)
 
-      // Invalidate email queries to trigger refetch
-      // Import and use queryClient to invalidate the query
+      // Insert email directly into React Query cache and invalidate list
       import('../providers/QueryProvider').then(({ queryClient }) => {
-        // Invalidate both the specific email AND the emails list
-        queryClient.invalidateQueries({ queryKey: ['emails', id] })
+        // Insert the email data directly into cache (no refetch needed)
+        queryClient.setQueryData(['emails', id], email)
+
+        // Invalidate the emails list to show the new email in sidebar
         queryClient.invalidateQueries({ queryKey: ['emails'] })
       })
 
-      // Remove from store after 3 seconds (give time for query refetch)
+      // Remove from store after 3 seconds (safe now that email is in cache)
       setTimeout(() => {
         get().removeGeneration(id)
       }, 3000)
