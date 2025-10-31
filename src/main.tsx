@@ -1,6 +1,7 @@
 import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { QueryProvider } from './providers/QueryProvider'
 import { AuthProvider } from './contexts/AuthContext'
 import { generationManager } from './lib/generationManager'
@@ -21,6 +22,11 @@ createRoot(document.getElementById('root')!).render(
     <QueryProvider>
       <AuthProvider>
         <BrowserRouter>
+          <Toaster
+            position="top-right"
+            duration={Infinity}
+            visibleToasts={3}
+          />
           <AppWithRecovery />
         </BrowserRouter>
       </AuthProvider>
