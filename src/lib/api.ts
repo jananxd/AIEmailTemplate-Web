@@ -206,7 +206,7 @@ class ApiClient {
           message: 'An unknown error occurred',
         }))
         callbacks.onError(error.error, error.message)
-        return abortController
+        throw new Error(error.message || error.error)
       }
 
       // Read SSE stream
@@ -215,7 +215,7 @@ class ApiClient {
 
       if (!reader) {
         callbacks.onError('No response body')
-        return abortController
+        throw new Error('No response body')
       }
 
       // Process stream
