@@ -1,8 +1,10 @@
 # Backend API Documentation
 
 **Project:** AI Email Template Generator
-**Version:** 1.0
+**Version:** 2.0 (JSX-First Architecture)
 **Base URL:** `https://api.yourdomain.com/v1`
+
+**Architecture Note:** This API uses a JSX-first approach. Email templates are stored as JSX source code, and the backend automatically extracts a `props_schema` that defines template variables. No JSON structure storage is used.
 
 ---
 
@@ -40,7 +42,7 @@ Authorization: Bearer {jwt-token}
 
 ### 1. Generate Email (LLM)
 
-Generate email JSON structure using LLM based on user prompt.
+Generate email template using LLM based on user prompt. Returns JSX source code with extracted props schema.
 
 ```http
 POST /emails/generate
@@ -61,40 +63,20 @@ POST /emails/generate
 {
   "email": {
     "id": "email-uuid",
-    "meta": {
-      "subject": "Welcome to our platform!",
-      "previewText": "Get started with your account"
+    "subject": "Welcome to our platform!",
+    "preview": "Get started with your account",
+    "jsx_source": "import { Html, Head, Body, Container, Heading, Text } from '@react-email/components'\n\nexport default function Email({ firstName }) {\n  return (\n    <Html>\n      <Head />\n      <Body>\n        <Container>\n          <Heading>Welcome {firstName}!</Heading>\n          <Text>We're excited to have you on board.</Text>\n        </Container>\n      </Body>\n    </Html>\n  )\n}",
+    "props_schema": {
+      "firstName": {
+        "type": "string",
+        "required": true
+      }
     },
-    "jsonStructure": {
-      "meta": {
-        "subject": "Welcome to our platform!",
-        "previewText": "Get started with your account"
-      },
-      "root": {
-        "id": "root-uuid",
-        "type": "section",
-        "children": [
-          {
-            "id": "block-uuid-1",
-            "type": "heading",
-            "level": 1,
-            "text": "Welcome {{firstName}}!"
-          },
-          {
-            "id": "block-uuid-2",
-            "type": "text",
-            "text": "We're excited to have you on board."
-          }
-        ]
-      },
-      "version": 2
-    },
-    "variables": ["firstName"],
     "prompt": "Create a welcome email for new users",
-    "attachedImage": "url-if-uploaded",
-    "projectId": "uuid-or-null",
-    "createdAt": "2025-10-28T10:30:00Z",
-    "updatedAt": "2025-10-28T10:30:00Z"
+    "attached_image": "url-if-uploaded",
+    "project_id": "uuid-or-null",
+    "created_at": "2025-10-28T10:30:00Z",
+    "updated_at": "2025-10-28T10:30:00Z"
   }
 }
 ```
@@ -125,15 +107,14 @@ GET /emails?projectId={uuid}&limit=20&offset=0
   "emails": [
     {
       "id": "email-uuid",
-      "meta": {
-        "subject": "Welcome email",
-        "previewText": "..."
-      },
-      "jsonStructure": {},
+      "subject": "Welcome email",
+      "preview": "...",
+      "jsx_source": "...",
+      "props_schema": {},
       "prompt": "...",
-      "projectId": "uuid-or-null",
-      "createdAt": "2025-10-28T10:30:00Z",
-      "updatedAt": "2025-10-28T10:30:00Z"
+      "project_id": "uuid-or-null",
+      "created_at": "2025-10-28T10:30:00Z",
+      "updated_at": "2025-10-28T10:30:00Z"
     }
   ],
   "pagination": {
@@ -159,13 +140,15 @@ GET /emails/:id
 {
   "email": {
     "id": "email-uuid",
-    "meta": {},
-    "jsonStructure": {},
+    "subject": "Email subject",
+    "preview": "Preview text",
+    "jsx_source": "...",
+    "props_schema": {},
     "prompt": "...",
-    "attachedImage": "url-or-null",
-    "projectId": "uuid-or-null",
-    "createdAt": "2025-10-28T10:30:00Z",
-    "updatedAt": "2025-10-28T10:30:00Z"
+    "attached_image": "url-or-null",
+    "project_id": "uuid-or-null",
+    "created_at": "2025-10-28T10:30:00Z",
+    "updated_at": "2025-10-28T10:30:00Z"
   }
 }
 ```
@@ -177,26 +160,19 @@ GET /emails/:id
 
 ### 4. Update Email
 
-Update email JSON structure (after user edits blocks).
+Update email template (JSX source, subject, preview). Backend automatically extracts props_schema from JSX.
 
 ```http
-PUT /emails/:id
+PATCH /emails/:id
 ```
 
 **Request Body:**
 ```json
 {
-  "meta": {
-    "subject": "Updated subject",
-    "previewText": "Updated preview"
-  },
-  "jsonStructure": {
-    "meta": {},
-    "root": {},
-    "version": 2
-  },
-  "variables": ["firstName", "amount", "friendName"],
-  "projectId": "uuid-or-null"
+  "subject": "Updated subject",
+  "preview": "Updated preview",
+  "jsx_source": "import { Html, Body, Container, Text } from '@react-email/components'\n\nexport default function Email({ firstName, amount }) {\n  return (\n    <Html>\n      <Body>\n        <Container>\n          <Text>Hello {firstName}! Your balance is {amount}.</Text>\n        </Container>\n      </Body>\n    </Html>\n  )\n}",
+  "project_id": "uuid-or-null"
 }
 ```
 
@@ -205,12 +181,19 @@ PUT /emails/:id
 {
   "email": {
     "id": "email-uuid",
-    "meta": {},
-    "jsonStructure": {},
-    "updatedAt": "2025-10-28T11:00:00Z"
+    "subject": "Updated subject",
+    "preview": "Updated preview",
+    "jsx_source": "...",
+    "props_schema": {
+      "firstName": { "type": "string", "required": true },
+      "amount": { "type": "string", "required": true }
+    },
+    "updated_at": "2025-10-28T11:00:00Z"
   }
 }
 ```
+
+**Note:** The backend automatically parses the JSX source and extracts the props_schema. You don't need to send props_schema manually.
 
 ---
 
@@ -231,7 +214,7 @@ DELETE /emails/:id
 
 ### 6. Regenerate Email
 
-Regenerate email with modified prompt.
+Regenerate email JSX with modified prompt.
 
 ```http
 POST /emails/:id/regenerate
@@ -250,9 +233,10 @@ POST /emails/:id/regenerate
 {
   "email": {
     "id": "email-uuid",
-    "jsonStructure": {},
+    "jsx_source": "...",
+    "props_schema": {},
     "prompt": "Updated prompt",
-    "updatedAt": "2025-10-28T11:15:00Z"
+    "updated_at": "2025-10-28T11:15:00Z"
   }
 }
 ```
@@ -277,10 +261,10 @@ X-API-Key: {user-api-key}
 **Request Body:**
 ```json
 {
-  "variables": {
+  "props": {
     "firstName": "John",
     "amount": "$50",
-    "friendName": "Sarah"
+    "companyName": "Acme Corp"
   }
 }
 ```
@@ -288,8 +272,8 @@ X-API-Key: {user-api-key}
 **Response:** `200 OK`
 ```json
 {
-  "html": "<html><body>Hey John! You owe $50 to Sarah...</body></html>",
-  "plainText": "Hey John! You owe $50 to Sarah..."
+  "html": "<html><body>Hey John! Welcome to Acme Corp. Your balance is $50...</body></html>",
+  "plainText": "Hey John! Welcome to Acme Corp. Your balance is $50..."
 }
 ```
 
@@ -305,10 +289,10 @@ const response = await fetch('https://api.yourdomain.com/api/public/emails/email
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    variables: {
+    props: {
       firstName: customer.firstName,
       amount: invoice.total,
-      friendName: invoice.payer
+      companyName: customer.company
     }
   })
 });
@@ -316,6 +300,8 @@ const response = await fetch('https://api.yourdomain.com/api/public/emails/email
 const { html } = await response.json();
 // Use html to send email via their own email service
 ```
+
+**Note:** The props must match the props_schema extracted from the template's JSX source.
 
 ---
 
@@ -331,7 +317,7 @@ POST /emails/:id/send-test
 ```json
 {
   "to": "test@example.com",
-  "variables": {
+  "props": {
     "firstName": "Test User",
     "amount": "$50"
   }
@@ -588,41 +574,33 @@ GET /users/me
 
 ## Optional Helper Endpoints
 
-### Extract Variables from JSON
+### Extract Props from JSX
 
-Parse email JSON and return all detected variables.
+Parse JSX source and return the extracted props schema.
 
 ```http
-POST /emails/extract-variables
+POST /emails/extract-props
 ```
 
 **Request Body:**
 ```json
 {
-  "jsonStructure": {
-    "root": {
-      "type": "section",
-      "children": [
-        {
-          "type": "heading",
-          "text": "Hey {{firstName}}!"
-        },
-        {
-          "type": "text",
-          "text": "You owe {{amount}} to {{friendName}}"
-        }
-      ]
-    }
-  }
+  "jsx_source": "import { Html, Body, Text } from '@react-email/components'\n\nexport default function Email({ firstName, amount, friendName }) {\n  return (\n    <Html>\n      <Body>\n        <Text>Hey {firstName}! You owe {amount} to {friendName}</Text>\n      </Body>\n    </Html>\n  )\n}"
 }
 ```
 
 **Response:** `200 OK`
 ```json
 {
-  "variables": ["firstName", "amount", "friendName"]
+  "props_schema": {
+    "firstName": { "type": "string", "required": true },
+    "amount": { "type": "string", "required": true },
+    "friendName": { "type": "string", "required": true }
+  }
 }
 ```
+
+**Note:** This is done automatically when creating or updating emails. This endpoint is for validation/preview purposes.
 
 ---
 
@@ -688,56 +666,42 @@ X-RateLimit-Reset: 1698765432
 ```typescript
 interface Email {
   id: string
-  meta: EmailMeta
-  jsonStructure: EmailJSON
-  variables: string[]  // Detected variables like ["firstName", "amount"]
+  subject: string
+  preview: string
+  jsx_source: string  // JSX source code as string
+  props_schema: PropSchema  // Extracted props schema
+  prompt: string
+  attached_image?: string
+  project_id?: string
+  created_at: string
+  updated_at: string
+}
+
+interface PropSchema {
+  [propName: string]: {
+    type: string  // 'string', 'number', 'boolean', etc.
+    required: boolean
+  }
+}
+```
+
+**Frontend Types (camelCase):**
+
+```typescript
+// Frontend uses camelCase for consistency with JavaScript conventions
+interface Email {
+  id: string
+  meta: {
+    subject: string
+    previewText: string
+  }
+  jsxSource: string
+  propsSchema: PropSchema
   prompt: string
   attachedImage?: string
   projectId?: string
   createdAt: string
   updatedAt: string
-}
-
-interface EmailMeta {
-  subject: string
-  previewText: string
-}
-
-interface EmailJSON {
-  meta: EmailMeta
-  root: EmailNode
-  version: number
-}
-
-interface EmailNode {
-  id: string
-  type: 'section' | 'heading' | 'text' | 'button' | 'image' | 'divider' | 'spacer'
-  children?: EmailNode[]
-
-  // Heading properties
-  level?: 1 | 2 | 3
-
-  // Text/Heading properties
-  text?: string
-
-  // Button properties
-  label?: string
-  href?: string
-  target?: '_blank' | '_self'
-
-  // Image properties
-  src?: string
-  alt?: string
-  width?: number
-  height?: number
-
-  // Spacer properties
-  height?: number
-
-  // Section properties (container)
-  backgroundColor?: string
-  padding?: string
-  borderRadius?: string
 }
 ```
 
@@ -846,12 +810,11 @@ interface UploadedFile {
 
 1. **LLM Integration**: The `/emails/generate` endpoint should use the `brandContext` from the project (if `projectId` is provided) to inform the LLM's generation prompt.
 
-2. **Variable Handling - Frontend Responsibility**:
-   - Variables use double curly braces: `{{variableName}}`
-   - **Frontend extracts variables** from the JSON structure when user edits blocks
-   - Frontend sends the `variables` array in the update request
-   - Backend just stores the `variables` array - no need to parse the JSON
-   - This allows users to call the public render API with their own variable values
+2. **JSX Props Schema Extraction**:
+   - Backend automatically parses JSX source code to extract `props_schema`
+   - Props schema defines which variables are available in the template
+   - Frontend does NOT send `props_schema` - backend extracts it automatically
+   - Props use JSX syntax: `{variableName}` (not `{{variableName}}`)
 
 3. **Public API for End Users**:
    - Users should be able to generate API keys in the UI
@@ -862,21 +825,23 @@ interface UploadedFile {
 4. **Image Handling**: Images can be provided as base64 strings or URLs. The backend should handle both and return CDN URLs.
 
 5. **Email Rendering**: The `/api/public/emails/:id/render` endpoint should:
-   - Take the stored `jsonStructure`
-   - Replace `{{variables}}` with provided values
-   - Render using React Email or similar to generate final HTML
+   - Take the stored `jsx_source`
+   - Execute JSX with provided props values
+   - Render using React Email (`@react-email/render`) to generate final HTML
    - Return both HTML and plain text versions
 
 6. **Database Schema**:
-   - Store `jsonStructure` as JSONB (PostgreSQL) or similar
-   - Store `variables` as a string array
-   - Index on `variables` if you want to allow filtering by variable names
+   - Store `jsx_source` as TEXT (JSX source code)
+   - Store `props_schema` as JSONB (extracted from JSX)
+   - No need to store `json_state` or JSON structure
 
 7. **Security**:
-   - Validate all user inputs, especially in the JSON structure
+   - Validate all user inputs, especially JSX source code
+   - Sanitize JSX to prevent XSS attacks
    - Rate limit the public API heavily (it's user-facing)
    - API keys should be scoped to specific users/projects
 
 8. **Performance**:
-   - Consider caching rendered HTML for common variable combinations
+   - Consider caching rendered HTML for common prop combinations
    - The public render endpoint should be very fast (< 100ms)
+   - Props schema extraction can be cached until JSX changes
