@@ -1,105 +1,43 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import type { DragEndEvent } from '@dnd-kit/core'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { useEmail, useUpdateEmail } from '../hooks/useEmails'
-import FloatingToolbar from '../components/block-editor/FloatingToolbar'
-import EmailPreview from '../components/email/EmailPreview'
-import VariablePanel from '../components/email/VariablePanel'
 import EmailActions from '../components/email/EmailActions'
-import {
-  HeadingBlock,
-  TextBlock,
-  ButtonBlock,
-  ImageBlock,
-  DividerBlock,
-  SpacerBlock,
-  SectionBlock,
-} from '../components/block-editor/blocks'
+import CodeTab from '../components/email-editor/CodeTab'
+import CanvasTab from '../components/email-editor/CanvasTab'
+import UnsavedChangesModal from '../components/email-editor/UnsavedChangesModal'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import { toast } from 'sonner'
+import { codeToCanvas } from '../utils/codeToCanvas'
+import { canvasToCode } from '../utils/canvasToCode'
 import type { EmailNode } from '../types/email'
 import { generateId } from '../lib/utils'
 import { useGenerationStore } from '../store/generationStore'
 import GenerationProgress from '../components/generation/GenerationProgress'
 import { generationManager } from '../lib/generationManager'
 
-const blockComponents = {
-  heading: HeadingBlock,
-  text: TextBlock,
-  button: ButtonBlock,
-  image: ImageBlock,
-  divider: DividerBlock,
-  spacer: SpacerBlock,
-  section: SectionBlock,
-}
-
-interface SortableBlockProps {
-  block: EmailNode
-  isEditing: boolean
-  onUpdate: (updates: Partial<EmailNode>) => void
-  onDelete: () => void
-  onEditToggle: () => void
-}
-
-function SortableBlock({
-  block,
-  isEditing,
-  onUpdate,
-  onDelete,
-  onEditToggle,
-}: SortableBlockProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: block.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  const BlockComponent = blockComponents[block.type]
-  if (!BlockComponent) return null
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <BlockComponent
-        block={block}
-        isEditing={isEditing}
-        onUpdate={onUpdate}
-        onDelete={onDelete}
-        onEditToggle={onEditToggle}
-      />
-    </div>
-  )
-}
-
 export default function EmailDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data, isLoading } = useEmail(id!)
   const updateEmail = useUpdateEmail()
-  const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
-  const [testVariables, setTestVariables] = useState<Record<string, string>>({})
-  const [showPreview, setShowPreview] = useState(true)
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'canvas' | 'code'>('canvas')
+  const [codeEditorValue, setCodeEditorValue] = useState<string>('')
+  const [isCodeDirty, setIsCodeDirty] = useState(false)
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false)
+  const [pendingTab, setPendingTab] = useState<'canvas' | 'code' | null>(null)
+
+  useUnsavedChanges(isCodeDirty)
+
+  // Update code when email data changes (generate code immediately, not just when on Code tab)
+  useEffect(() => {
+    if (data && !isCodeDirty) {
+      const generatedCode = canvasToCode(data.jsonStructure.root.children || [])
+      setCodeEditorValue(generatedCode)
+    }
+  }, [data, isCodeDirty])
 
   // Subscribe to generation state
   const generationState = useGenerationStore((state) =>
@@ -118,12 +56,90 @@ export default function EmailDetail() {
     }
   }
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
+  // Tab switching logic
+  const handleTabSwitch = (newTab: 'canvas' | 'code') => {
+    if (newTab === activeTab) return
+
+    if (activeTab === 'code' && isCodeDirty) {
+      setPendingTab(newTab)
+      setShowUnsavedModal(true)
+      return
+    }
+
+    setActiveTab(newTab)
+  }
+
+  const handleSaveAndSwitch = async () => {
+    try {
+      await handleSaveCode(codeEditorValue)
+      setIsCodeDirty(false)
+      setShowUnsavedModal(false)
+      if (pendingTab) {
+        setActiveTab(pendingTab)
+        setPendingTab(null)
+      }
+      toast.success('Code saved successfully')
+    } catch {
+      toast.error('Failed to save code')
+    }
+  }
+
+  const handleDiscardAndSwitch = () => {
+    setIsCodeDirty(false)
+    setShowUnsavedModal(false)
+    if (pendingTab) {
+      setActiveTab(pendingTab)
+      setPendingTab(null)
+    }
+  }
+
+  const handleCancelSwitch = () => {
+    setShowUnsavedModal(false)
+    setPendingTab(null)
+  }
+
+  const handleSaveCode = async (code: string) => {
+    const parseResult = codeToCanvas(code)
+
+    if (!parseResult.success) {
+      toast.error(`Failed to parse code: ${parseResult.error}`)
+      throw new Error(parseResult.error)
+    }
+
+    try {
+      // Update email with new code
+      // For now, keep existing jsonStructure (canvas as source of truth)
+      await updateEmail.mutateAsync({
+        id: email.id,
+        data: {
+          // In future: Update jsonStructure from parseResult.blocks
+          // For now, just acknowledge save without updating structure
+        },
+      })
+
+      setIsCodeDirty(false)
+      setCodeEditorValue(code)
+      toast.success('Code saved successfully')
+    } catch (error) {
+      toast.error('Failed to save code')
+      throw error
+    }
+  }
+
+  const handleReorderBlocks = (reorderedBlocks: EmailNode[]) => {
+    updateEmail.mutate({
+      id: email.id,
+      data: {
+        jsonStructure: {
+          ...email.jsonStructure,
+          root: {
+            ...email.jsonStructure.root,
+            children: reorderedBlocks,
+          },
+        },
+      },
     })
-  )
+  }
 
   // PRIORITY 1: Show generation progress if generating (check both Zustand and localStorage)
   if (isGenerating && !data) {
@@ -170,30 +186,6 @@ export default function EmailDetail() {
 
   const email = data
   const blocks = email.jsonStructure.root.children || []
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (over && active.id !== over.id) {
-      const oldIndex = blocks.findIndex((b) => b.id === active.id)
-      const newIndex = blocks.findIndex((b) => b.id === over.id)
-
-      const reorderedBlocks = arrayMove(blocks, oldIndex, newIndex)
-
-      updateEmail.mutate({
-        id: email.id,
-        data: {
-          jsonStructure: {
-            ...email.jsonStructure,
-            root: {
-              ...email.jsonStructure.root,
-              children: reorderedBlocks,
-            },
-          },
-        },
-      })
-    }
-  }
 
   const handleAddBlock = (newBlock: Omit<EmailNode, 'id'>) => {
     const blockWithId = { ...newBlock, id: generateId() } as EmailNode
@@ -267,90 +259,66 @@ export default function EmailDetail() {
               </p>
             </div>
           </div>
-          <EmailActions email={email} testVariables={testVariables} />
+          <EmailActions email={email} testVariables={{}} />
         </div>
       </div>
 
-      {/* Split-Pane Editor/Preview */}
-      <div className="flex h-[calc(100vh-80px)]">
-        {/* Left: Block Editor */}
-        <div className="flex-1 overflow-y-auto px-6 py-8">
-          <div className="max-w-3xl mx-auto">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex gap-1">
+            <button
+              onClick={() => handleTabSwitch('canvas')}
+              className={`px-6 py-3 font-medium border-b-2 transition-colors ${
+                activeTab === 'canvas'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
             >
-              <SortableContext
-                items={blocks.map((b) => b.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-4">
-                  {blocks.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
-                      <p>No blocks yet. Use the toolbar below to add content.</p>
-                    </div>
-                  ) : (
-                    blocks.map((block) => (
-                      <SortableBlock
-                        key={block.id}
-                        block={block}
-                        isEditing={editingBlockId === block.id}
-                        onUpdate={(updates) => handleUpdateBlock(block.id, updates)}
-                        onDelete={() => handleDeleteBlock(block.id)}
-                        onEditToggle={() =>
-                          setEditingBlockId(
-                            editingBlockId === block.id ? null : block.id
-                          )
-                        }
-                      />
-                    ))
-                  )}
-                </div>
-              </SortableContext>
-            </DndContext>
+              Canvas
+            </button>
+            <button
+              onClick={() => handleTabSwitch('code')}
+              className={`px-6 py-3 font-medium border-b-2 transition-colors relative ${
+                activeTab === 'code'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Code
+              {isCodeDirty && (
+                <span className="absolute top-2 right-2 w-2 h-2 bg-yellow-500 rounded-full" />
+              )}
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Right: Preview */}
-        {showPreview && (
-          <div className="w-1/2 border-l border-gray-200 bg-gray-100 overflow-y-auto p-6">
-            <div className="max-w-2xl mx-auto space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Preview</h2>
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="text-sm text-gray-600 hover:text-gray-900"
-                >
-                  Hide Preview
-                </button>
-              </div>
-
-              <VariablePanel
-                blocks={blocks}
-                onVariablesChange={setTestVariables}
-              />
-
-              <EmailPreview
-                blocks={blocks}
-                variables={testVariables}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Toggle Preview Button (when hidden) */}
-        {!showPreview && (
-          <button
-            onClick={() => setShowPreview(true)}
-            className="fixed right-4 top-24 px-3 py-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700"
-          >
-            Show Preview
-          </button>
+      {/* Tab Content */}
+      <div className="h-[calc(100vh-180px)]">
+        {activeTab === 'canvas' ? (
+          <CanvasTab
+            blocks={blocks}
+            onAddBlock={handleAddBlock}
+            onUpdateBlock={handleUpdateBlock}
+            onDeleteBlock={handleDeleteBlock}
+            onReorderBlocks={handleReorderBlocks}
+          />
+        ) : (
+          <CodeTab
+            initialCode={codeEditorValue}
+            onSave={handleSaveCode}
+          />
         )}
       </div>
 
-      <FloatingToolbar onAddBlock={handleAddBlock} />
+      {/* Unsaved Changes Modal */}
+      <UnsavedChangesModal
+        isOpen={showUnsavedModal}
+        onSaveAndSwitch={handleSaveAndSwitch}
+        onDiscard={handleDiscardAndSwitch}
+        onCancel={handleCancelSwitch}
+      />
     </div>
   )
 }
