@@ -15,18 +15,18 @@ export default function EmailActions({ email, testVariables }: EmailActionsProps
 
   const handleCopyHTML = async () => {
     // TODO: Render email to HTML first
-    const htmlContent = JSON.stringify(email.jsonStructure, null, 2)
+    const htmlContent = email.jsxSource
     await navigator.clipboard.writeText(htmlContent)
-    alert('Email JSON copied to clipboard!')
+    alert('Email JSX copied to clipboard!')
   }
 
   const handleDownload = () => {
-    const content = JSON.stringify(email.jsonStructure, null, 2)
-    const blob = new Blob([content], { type: 'application/json' })
+    const content = email.jsxSource
+    const blob = new Blob([content], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${email.meta.subject.replace(/\s+/g, '-')}.json`
+    a.download = `${email.meta.subject.replace(/\s+/g, '-')}.jsx`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -63,7 +63,7 @@ export default function EmailActions({ email, testVariables }: EmailActionsProps
       <button
         onClick={handleCopyHTML}
         className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-        title="Copy JSON"
+        title="Copy JSX"
       >
         <Copy size={16} />
         <span className="text-sm">Copy</span>
@@ -72,7 +72,7 @@ export default function EmailActions({ email, testVariables }: EmailActionsProps
       <button
         onClick={handleDownload}
         className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-        title="Download JSON"
+        title="Download JSX"
       >
         <Download size={16} />
         <span className="text-sm">Download</span>
