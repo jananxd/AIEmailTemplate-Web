@@ -6,7 +6,7 @@ import EmailActions from '../components/email/EmailActions'
 import CodeTab from '../components/email-editor/CodeTab'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { toast } from 'sonner'
-import { wrapWithImports, stripImports } from '../utils/jsxFormat'
+import { wrapWithImports } from '../utils/jsxFormat'
 import { useGenerationStore } from '../store/generationStore'
 import GenerationProgress from '../components/generation/GenerationProgress'
 import { generationManager } from '../lib/generationManager'
@@ -57,14 +57,12 @@ export default function EmailDetail() {
 
   const handleSaveCode = async (code: string) => {
     try {
-      // Strip imports before sending to backend (backend expects bare JSX)
-      const bareJsx = stripImports(code)
-
-      // Send JSX to backend - it will parse and validate
+      // Send complete JSX file to backend (includes imports, interfaces, function)
+      // Backend stores the full file and extracts props_schema from it
       await updateEmail.mutateAsync({
         id: email.id,
         data: {
-          jsxSource: bareJsx, // Backend validates and extracts props_schema automatically
+          jsxSource: code, // Backend stores complete JSX file
         },
       })
 
