@@ -5,8 +5,9 @@
 export function extractPropsFromCode(code: string): string[] {
   const propNames: string[] = []
 
-  // Find interface declarations
-  const interfaceRegex = /interface\s+\w+Props\s*\{([^}]+)\}/g
+  // Find interface declarations (matches both single-line and multi-line)
+  // Use [\s\S] instead of [^}] to match newlines
+  const interfaceRegex = /interface\s+\w+Props\s*\{([\s\S]+?)\}/g
   const matches = code.matchAll(interfaceRegex)
 
   for (const match of matches) {
@@ -14,7 +15,7 @@ export function extractPropsFromCode(code: string): string[] {
 
     // Extract property names from interface body
     // Matches: propertyName?: type or propertyName: type
-    const propRegex = /(\w+)\??:\s*[^;]+/g
+    const propRegex = /(\w+)\??:\s*[^;,\n]+/g
     const propMatches = interfaceBody.matchAll(propRegex)
 
     for (const propMatch of propMatches) {
