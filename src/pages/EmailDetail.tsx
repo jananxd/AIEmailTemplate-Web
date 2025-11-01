@@ -8,10 +8,7 @@ import CanvasTab from '../components/email-editor/CanvasTab'
 import UnsavedChangesModal from '../components/email-editor/UnsavedChangesModal'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { toast } from 'sonner'
-import { canvasToCode } from '../utils/canvasToCode'
 import { wrapWithImports, stripImports } from '../utils/jsxFormat'
-import type { EmailNode } from '../types/email'
-import { generateId } from '../lib/utils'
 import { useGenerationStore } from '../store/generationStore'
 import GenerationProgress from '../components/generation/GenerationProgress'
 import { generationManager } from '../lib/generationManager'
@@ -34,18 +31,8 @@ export default function EmailDetail() {
   // Update code when email data changes (generate code immediately, not just when on Code tab)
   useEffect(() => {
     if (data && !isCodeDirty) {
-      // Always regenerate from canvas blocks to get latest variables and component structure
-      const hasCanvasBlocks = data.jsonStructure?.root?.children && data.jsonStructure.root.children.length > 0
-
-      if (hasCanvasBlocks) {
-        // Generate fresh code from canvas blocks with proper variable handling
-        const generatedCode = canvasToCode(
-          data.jsonStructure.root.children || [],
-          data.meta.subject // Pass email subject for component name
-        )
-        setCodeEditorValue(generatedCode)
-      } else if (data.jsxSource) {
-        // Fallback: Use jsx_source from backend only if no canvas blocks
+      // Use jsx_source from backend (primary source of truth)
+      if (data.jsxSource) {
         const codeWithImports = wrapWithImports(data.jsxSource)
         setCodeEditorValue(codeWithImports)
       }
@@ -120,7 +107,7 @@ export default function EmailDetail() {
       await updateEmail.mutateAsync({
         id: email.id,
         data: {
-          jsxSource: bareJsx, // Backend parses this to json_state
+          jsxSource: bareJsx, // Backend validates and extracts props_schema automatically
         },
       })
 
@@ -135,19 +122,9 @@ export default function EmailDetail() {
     }
   }
 
-  const handleReorderBlocks = (reorderedBlocks: EmailNode[]) => {
-    updateEmail.mutate({
-      id: email.id,
-      data: {
-        jsonStructure: {
-          ...email.jsonStructure,
-          root: {
-            ...email.jsonStructure.root,
-            children: reorderedBlocks,
-          },
-        },
-      },
-    })
+  // TODO: Canvas editor handlers will be removed in Task 4
+  const handleReorderBlocks = (_reorderedBlocks: any[]) => {
+    // Canvas editor deprecated - will be removed in Task 4
   }
 
   // PRIORITY 1: Show generation progress if generating (check both Zustand and localStorage)
@@ -194,57 +171,20 @@ export default function EmailDetail() {
   }
 
   const email = data
-  const blocks = email.jsonStructure.root.children || []
+  // TODO: Canvas editor will be removed in Task 4
+  const blocks: any[] = [] // Placeholder for canvas blocks (deprecated)
 
-  const handleAddBlock = (newBlock: Omit<EmailNode, 'id'>) => {
-    const blockWithId = { ...newBlock, id: generateId() } as EmailNode
-    const updatedBlocks = [...blocks, blockWithId]
-    updateEmail.mutate({
-      id: email.id,
-      data: {
-        jsonStructure: {
-          ...email.jsonStructure,
-          root: {
-            ...email.jsonStructure.root,
-            children: updatedBlocks,
-          },
-        },
-      },
-    })
+  // TODO: Canvas editor handlers will be removed in Task 4
+  const handleAddBlock = (_newBlock: any) => {
+    // Canvas editor deprecated - will be removed in Task 4
   }
 
-  const handleUpdateBlock = (blockId: string, updates: Partial<EmailNode>) => {
-    const updatedBlocks = blocks.map((block) =>
-      block.id === blockId ? { ...block, ...updates } : block
-    )
-    updateEmail.mutate({
-      id: email.id,
-      data: {
-        jsonStructure: {
-          ...email.jsonStructure,
-          root: {
-            ...email.jsonStructure.root,
-            children: updatedBlocks,
-          },
-        },
-      },
-    })
+  const handleUpdateBlock = (_blockId: string, _updates: any) => {
+    // Canvas editor deprecated - will be removed in Task 4
   }
 
-  const handleDeleteBlock = (blockId: string) => {
-    const updatedBlocks = blocks.filter((block) => block.id !== blockId)
-    updateEmail.mutate({
-      id: email.id,
-      data: {
-        jsonStructure: {
-          ...email.jsonStructure,
-          root: {
-            ...email.jsonStructure.root,
-            children: updatedBlocks,
-          },
-        },
-      },
-    })
+  const handleDeleteBlock = (_blockId: string) => {
+    // Canvas editor deprecated - will be removed in Task 4
   }
 
   return (
@@ -261,10 +201,10 @@ export default function EmailDetail() {
             </button>
             <div className="flex-1">
               <h1 className="text-xl font-semibold text-gray-900">
-                {email.jsonStructure.meta.subject}
+                {email.meta.subject}
               </h1>
               <p className="text-sm text-gray-500">
-                {email.jsonStructure.meta.previewText}
+                {email.meta.previewText}
               </p>
             </div>
           </div>
