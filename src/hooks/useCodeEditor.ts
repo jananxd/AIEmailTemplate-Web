@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { editor } from 'monaco-editor'
 
 export interface UseCodeEditorOptions {
@@ -10,6 +10,14 @@ export function useCodeEditor({ initialValue = '', onChange }: UseCodeEditorOpti
   const [code, setCode] = useState(initialValue)
   const [isDirty, setIsDirty] = useState(false)
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+
+  // Update code when initialValue changes (e.g., when email data loads)
+  useEffect(() => {
+    if (initialValue && initialValue !== code && !isDirty) {
+      console.log('useCodeEditor: Updating code from initialValue, length:', initialValue.length)
+      setCode(initialValue)
+    }
+  }, [initialValue, code, isDirty])
 
   const handleEditorChange = useCallback((value: string | undefined) => {
     const newValue = value || ''
