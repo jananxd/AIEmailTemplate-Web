@@ -17,18 +17,8 @@ export function createPhantomEmail(generation: GenerationState): Email {
       subject,
       previewText: generation.message,
     },
-    jsonStructure: {
-      meta: {
-        subject,
-        previewText: generation.message,
-      },
-      root: {
-        id: 'temp-root',
-        type: 'section',
-        children: [],
-      },
-      version: 2,
-    },
+    jsxSource: '// Generating...',
+    propsSchema: {},
     variables: [],
     prompt: generation.prompt,
     projectId: generation.projectId || undefined,

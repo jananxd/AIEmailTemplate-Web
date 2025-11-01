@@ -6,6 +6,12 @@ import type {
 } from '../types'
 import { API_BASE_URL } from './config'
 
+// Helper to extract variable names from props schema
+function extractVariablesFromProps(propsSchema: any): string[] {
+  if (!propsSchema || typeof propsSchema !== 'object') return []
+  return Object.keys(propsSchema)
+}
+
 // Transform backend snake_case response to frontend camelCase Email type
 function transformEmailResponse(backendEmail: any): Email {
   return {
@@ -14,9 +20,9 @@ function transformEmailResponse(backendEmail: any): Email {
       subject: backendEmail.subject || '',
       previewText: backendEmail.preview || '',
     },
-    jsonStructure: backendEmail.json_state,
-    jsxSource: backendEmail.jsx_source || null,
-    variables: backendEmail.variables || [],
+    jsxSource: backendEmail.jsx_source,
+    propsSchema: backendEmail.props_schema || {},
+    variables: extractVariablesFromProps(backendEmail.props_schema),
     prompt: backendEmail.prompt || '',
     attachedImage: backendEmail.attached_image,
     projectId: backendEmail.project_id,
@@ -138,14 +144,12 @@ class ApiClient {
       payload.preview = data.meta.previewText
     }
 
-    if (data.jsonStructure !== undefined) {
-      payload.json_state = data.jsonStructure
-    }
-
-    // Add jsx_source support
     if (data.jsxSource !== undefined) {
       payload.jsx_source = data.jsxSource
     }
+
+    // props_schema is auto-extracted by backend from jsx_source
+    // Don't send it manually
 
     const response = await this.request<any>(`/emails/${id}`, {
       method: 'PATCH',
