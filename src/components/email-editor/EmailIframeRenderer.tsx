@@ -96,9 +96,12 @@ export default function EmailIframeRenderer({ code }: EmailIframeRendererProps) 
         const EmailComponent = executeCode(transpiledCode)
 
         if (!EmailComponent) {
+          console.error('Failed to execute transpiled code - no component returned')
           setRenderError('Failed to execute the transpiled code')
           return
         }
+
+        console.log('EmailComponent successfully created:', typeof EmailComponent)
 
         // Create props with variable values
         let props = {}
@@ -106,16 +109,20 @@ export default function EmailIframeRenderer({ code }: EmailIframeRendererProps) 
         if (detectedVariables.length > 0) {
           // Create mock props with {{variableName}} format for preview
           props = createMockProps(detectedVariables)
+          console.log('Using detected variables:', detectedVariables, props)
         } else {
           // Fallback: check for TypeScript interface props
           const propNames = extractPropsFromCode(codeToTranspile)
+          console.log('Extracted props from TypeScript interface:', propNames)
           props = createMockProps(propNames)
+          console.log('Created mock props:', props)
         }
 
         // Check if component has PreviewProps static property (highest priority)
         const componentWithProps = EmailComponent as unknown as { PreviewProps?: Record<string, unknown> }
         if (componentWithProps.PreviewProps) {
           props = componentWithProps.PreviewProps
+          console.log('Using PreviewProps:', props)
         }
 
         // Create the component element
@@ -160,6 +167,7 @@ export default function EmailIframeRenderer({ code }: EmailIframeRendererProps) 
 
         // Render the component to HTML string (render returns a Promise)
         const htmlString = await render(componentToRender)
+        console.log('Successfully rendered HTML, length:', htmlString.length)
         setHtml(htmlString)
         setRenderError(null)
       } catch (err) {
