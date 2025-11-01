@@ -70,10 +70,13 @@ function ErrorFallback({ error }: { error: Error }) {
 }
 
 export default function EmailIframeRenderer({ code }: EmailIframeRendererProps) {
+  console.log('EmailIframeRenderer mounted, code length:', code?.length)
+
   // Transform code and extract variables
   const { codeToTranspile, detectedVariables } = React.useMemo(() => {
     // Transform {{varName}} to {varName}
     const { transformedCode, variables: vars } = transformVariablesToProps(code)
+    console.log('Transformed code, detected variables:', vars)
     return { codeToTranspile: transformedCode, detectedVariables: vars }
   }, [code])
 

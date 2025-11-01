@@ -28,8 +28,12 @@ export default function EmailDetail() {
     if (data && !isCodeDirty) {
       // Use jsx_source from backend (primary source of truth)
       if (data.jsxSource) {
+        console.log('EmailDetail: Loading email data, jsxSource length:', data.jsxSource.length)
         const codeWithImports = wrapWithImports(data.jsxSource)
+        console.log('EmailDetail: Wrapped with imports, final code length:', codeWithImports.length)
         setCodeEditorValue(codeWithImports)
+      } else {
+        console.warn('EmailDetail: No jsxSource in email data!')
       }
     }
   }, [data, isCodeDirty])
