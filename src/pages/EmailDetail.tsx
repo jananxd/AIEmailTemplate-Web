@@ -4,8 +4,6 @@ import { ArrowLeft } from 'lucide-react'
 import { useEmail, useUpdateEmail } from '../hooks/useEmails'
 import EmailActions from '../components/email/EmailActions'
 import CodeTab from '../components/email-editor/CodeTab'
-import CanvasTab from '../components/email-editor/CanvasTab'
-import UnsavedChangesModal from '../components/email-editor/UnsavedChangesModal'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { toast } from 'sonner'
 import { wrapWithImports, stripImports } from '../utils/jsxFormat'
@@ -19,12 +17,9 @@ export default function EmailDetail() {
   const { data, isLoading } = useEmail(id!)
   const updateEmail = useUpdateEmail()
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<'canvas' | 'code'>('canvas')
+  // Code editor state
   const [codeEditorValue, setCodeEditorValue] = useState<string>('')
   const [isCodeDirty, setIsCodeDirty] = useState(false)
-  const [showUnsavedModal, setShowUnsavedModal] = useState(false)
-  const [pendingTab, setPendingTab] = useState<'canvas' | 'code' | null>(null)
 
   useUnsavedChanges(isCodeDirty)
 
@@ -56,48 +51,6 @@ export default function EmailDetail() {
     }
   }
 
-  // Tab switching logic
-  const handleTabSwitch = (newTab: 'canvas' | 'code') => {
-    if (newTab === activeTab) return
-
-    if (activeTab === 'code' && isCodeDirty) {
-      setPendingTab(newTab)
-      setShowUnsavedModal(true)
-      return
-    }
-
-    setActiveTab(newTab)
-  }
-
-  const handleSaveAndSwitch = async () => {
-    try {
-      await handleSaveCode(codeEditorValue)
-      setIsCodeDirty(false)
-      setShowUnsavedModal(false)
-      if (pendingTab) {
-        setActiveTab(pendingTab)
-        setPendingTab(null)
-      }
-      toast.success('Code saved successfully')
-    } catch {
-      toast.error('Failed to save code')
-    }
-  }
-
-  const handleDiscardAndSwitch = () => {
-    setIsCodeDirty(false)
-    setShowUnsavedModal(false)
-    if (pendingTab) {
-      setActiveTab(pendingTab)
-      setPendingTab(null)
-    }
-  }
-
-  const handleCancelSwitch = () => {
-    setShowUnsavedModal(false)
-    setPendingTab(null)
-  }
-
   const handleSaveCode = async (code: string) => {
     try {
       // Strip imports before sending to backend (backend expects bare JSX)
@@ -122,10 +75,6 @@ export default function EmailDetail() {
     }
   }
 
-  // TODO: Canvas editor handlers will be removed in Task 4
-  const handleReorderBlocks = (_reorderedBlocks: any[]) => {
-    // Canvas editor deprecated - will be removed in Task 4
-  }
 
   // PRIORITY 1: Show generation progress if generating (check both Zustand and localStorage)
   if (isGenerating && !data) {
@@ -171,21 +120,6 @@ export default function EmailDetail() {
   }
 
   const email = data
-  // TODO: Canvas editor will be removed in Task 4
-  const blocks: any[] = [] // Placeholder for canvas blocks (deprecated)
-
-  // TODO: Canvas editor handlers will be removed in Task 4
-  const handleAddBlock = (_newBlock: any) => {
-    // Canvas editor deprecated - will be removed in Task 4
-  }
-
-  const handleUpdateBlock = (_blockId: string, _updates: any) => {
-    // Canvas editor deprecated - will be removed in Task 4
-  }
-
-  const handleDeleteBlock = (_blockId: string) => {
-    // Canvas editor deprecated - will be removed in Task 4
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -212,62 +146,13 @@ export default function EmailDetail() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex gap-1">
-            <button
-              onClick={() => handleTabSwitch('canvas')}
-              className={`px-6 py-3 font-medium border-b-2 transition-colors ${
-                activeTab === 'canvas'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Canvas
-            </button>
-            <button
-              onClick={() => handleTabSwitch('code')}
-              className={`px-6 py-3 font-medium border-b-2 transition-colors relative ${
-                activeTab === 'code'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Code
-              {isCodeDirty && (
-                <span className="absolute top-2 right-2 w-2 h-2 bg-yellow-500 rounded-full" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Tab Content */}
+      {/* Code Editor */}
       <div className="h-[calc(100vh-180px)]">
-        {activeTab === 'canvas' ? (
-          <CanvasTab
-            blocks={blocks}
-            onAddBlock={handleAddBlock}
-            onUpdateBlock={handleUpdateBlock}
-            onDeleteBlock={handleDeleteBlock}
-            onReorderBlocks={handleReorderBlocks}
-          />
-        ) : (
-          <CodeTab
-            initialCode={codeEditorValue}
-            onSave={handleSaveCode}
-          />
-        )}
+        <CodeTab
+          initialCode={codeEditorValue}
+          onSave={handleSaveCode}
+        />
       </div>
-
-      {/* Unsaved Changes Modal */}
-      <UnsavedChangesModal
-        isOpen={showUnsavedModal}
-        onSaveAndSwitch={handleSaveAndSwitch}
-        onDiscard={handleDiscardAndSwitch}
-        onCancel={handleCancelSwitch}
-      />
     </div>
   )
 }

@@ -4,16 +4,11 @@ import * as React from 'react'
 import * as ReactEmailComponents from '@react-email/components'
 import { render } from '@react-email/render'
 import { extractPropsFromCode, createMockProps } from '../../utils/extractPropsFromCode'
-import { canvasToCode } from '../../utils/canvasToCode'
 import { transformVariablesToProps } from '../../utils/transformVariablesToProps'
-import type { EmailNode } from '../../types/email'
 
 interface EmailIframeRendererProps {
-  // Code view mode: pass JSX code directly
-  code?: string
-  // Canvas view mode: pass blocks + variables
-  blocks?: EmailNode[]
-  variables?: Record<string, string>
+  // JSX code to render
+  code: string
 }
 
 /**
@@ -60,21 +55,6 @@ function executeCode(transpiledCode: string): React.ComponentType | null {
   }
 }
 
-/**
- * Substitute {{varName}} placeholders in code with actual values
- */
-function substituteVariablesInCode(code: string, variables: Record<string, string>): string {
-  let substitutedCode = code
-  for (const [key, value] of Object.entries(variables)) {
-    // Replace {{varName}} with the actual value
-    // Escape special regex characters in the value
-    const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g')
-    substitutedCode = substitutedCode.replace(regex, escapedValue)
-  }
-  return substitutedCode
-}
-
 function ErrorFallback({ error }: { error: Error }) {
   return (
     <div className="flex items-center justify-center h-full bg-red-50">
@@ -89,36 +69,13 @@ function ErrorFallback({ error }: { error: Error }) {
   )
 }
 
-export default function EmailIframeRenderer({ code, blocks, variables = {} }: EmailIframeRendererProps) {
-  // Determine which mode we're in
-  const isCanvasMode = !!blocks
-  const isCodeMode = !!code
-
-  // Generate code from blocks if in Canvas mode
-  const generatedCode = React.useMemo(() => {
-    if (isCanvasMode && blocks) {
-      return canvasToCode(blocks)
-    }
-    return code || ''
-  }, [isCanvasMode, blocks, code])
-
-  // Transform code and extract variables based on mode
+export default function EmailIframeRenderer({ code }: EmailIframeRendererProps) {
+  // Transform code and extract variables
   const { codeToTranspile, detectedVariables } = React.useMemo(() => {
-    if (isCanvasMode) {
-      // Canvas mode: substitute {{varName}} with actual values
-      if (Object.keys(variables).length > 0) {
-        return {
-          codeToTranspile: substituteVariablesInCode(generatedCode, variables),
-          detectedVariables: []
-        }
-      }
-      return { codeToTranspile: generatedCode, detectedVariables: [] }
-    } else {
-      // Code mode: transform {{varName}} to {varName}
-      const { transformedCode, variables: vars } = transformVariablesToProps(generatedCode)
-      return { codeToTranspile: transformedCode, detectedVariables: vars }
-    }
-  }, [isCanvasMode, generatedCode, variables])
+    // Transform {{varName}} to {varName}
+    const { transformedCode, variables: vars } = transformVariablesToProps(code)
+    return { codeToTranspile: transformedCode, detectedVariables: vars }
+  }, [code])
 
   const { transpiledCode, error, isTranspiling } = useLivePreview({ code: codeToTranspile })
   const [html, setHtml] = React.useState<string>('')
@@ -143,24 +100,22 @@ export default function EmailIframeRenderer({ code, blocks, variables = {} }: Em
           return
         }
 
-        // For Code mode, create props with variable values
+        // Create props with variable values
         let props = {}
-        if (isCodeMode && codeToTranspile) {
-          // First, check for {{varName}} variables that were transformed
-          if (detectedVariables.length > 0) {
-            // Create mock props with {{variableName}} format for preview
-            props = createMockProps(detectedVariables)
-          } else {
-            // Fallback: check for TypeScript interface props
-            const propNames = extractPropsFromCode(codeToTranspile)
-            props = createMockProps(propNames)
-          }
+        // First, check for {{varName}} variables that were transformed
+        if (detectedVariables.length > 0) {
+          // Create mock props with {{variableName}} format for preview
+          props = createMockProps(detectedVariables)
+        } else {
+          // Fallback: check for TypeScript interface props
+          const propNames = extractPropsFromCode(codeToTranspile)
+          props = createMockProps(propNames)
+        }
 
-          // Check if component has PreviewProps static property (highest priority)
-          const componentWithProps = EmailComponent as unknown as { PreviewProps?: Record<string, unknown> }
-          if (componentWithProps.PreviewProps) {
-            props = componentWithProps.PreviewProps
-          }
+        // Check if component has PreviewProps static property (highest priority)
+        const componentWithProps = EmailComponent as unknown as { PreviewProps?: Record<string, unknown> }
+        if (componentWithProps.PreviewProps) {
+          props = componentWithProps.PreviewProps
         }
 
         // Create the component element
@@ -214,7 +169,7 @@ export default function EmailIframeRenderer({ code, blocks, variables = {} }: Em
     }
 
     renderComponent()
-  }, [transpiledCode, codeToTranspile, isCodeMode, detectedVariables])
+  }, [transpiledCode, codeToTranspile, detectedVariables])
 
   if (isTranspiling) {
     return (
