@@ -15,6 +15,7 @@ function transformEmailResponse(backendEmail: any): Email {
       previewText: backendEmail.preview || '',
     },
     jsonStructure: backendEmail.json_state,
+    jsxSource: backendEmail.jsx_source || null,
     variables: backendEmail.variables || [],
     prompt: backendEmail.prompt || '',
     attachedImage: backendEmail.attached_image,
@@ -129,10 +130,29 @@ class ApiClient {
   }
 
   async updateEmail(id: string, data: Partial<Email>): Promise<{ email: Email }> {
-    return this.request(`/emails/${id}`, {
+    const payload: any = {}
+
+    // Map camelCase to snake_case for backend
+    if (data.meta !== undefined) {
+      payload.subject = data.meta.subject
+      payload.preview = data.meta.previewText
+    }
+
+    if (data.jsonStructure !== undefined) {
+      payload.json_state = data.jsonStructure
+    }
+
+    // Add jsx_source support
+    if (data.jsxSource !== undefined) {
+      payload.jsx_source = data.jsxSource
+    }
+
+    const response = await this.request<any>(`/emails/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     })
+
+    return { email: transformEmailResponse(response) }
   }
 
   async deleteEmail(id: string): Promise<void> {

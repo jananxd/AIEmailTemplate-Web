@@ -37,6 +37,7 @@ export function configureMonaco(monaco: typeof Monaco) {
       export const Container: React.FC<React.HTMLAttributes<HTMLDivElement>>;
       export const Section: React.FC<React.HTMLAttributes<HTMLElement>>;
       export const Text: React.FC<React.HTMLAttributes<HTMLParagraphElement>>;
+      export const Heading: React.FC<React.HTMLAttributes<HTMLHeadingElement> & { as?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' }>;
       export const Button: React.FC<React.AnchorHTMLAttributes<HTMLAnchorElement>>;
       export const Img: React.FC<React.ImgHTMLAttributes<HTMLImageElement>>;
       export const Hr: React.FC<React.HTMLAttributes<HTMLHRElement>>;

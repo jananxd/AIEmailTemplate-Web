@@ -8,8 +8,8 @@ import CanvasTab from '../components/email-editor/CanvasTab'
 import UnsavedChangesModal from '../components/email-editor/UnsavedChangesModal'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 import { toast } from 'sonner'
-import { codeToCanvas } from '../utils/codeToCanvas'
 import { canvasToCode } from '../utils/canvasToCode'
+import { wrapWithImports, stripImports } from '../utils/jsxFormat'
 import type { EmailNode } from '../types/email'
 import { generateId } from '../lib/utils'
 import { useGenerationStore } from '../store/generationStore'
@@ -34,8 +34,21 @@ export default function EmailDetail() {
   // Update code when email data changes (generate code immediately, not just when on Code tab)
   useEffect(() => {
     if (data && !isCodeDirty) {
-      const generatedCode = canvasToCode(data.jsonStructure.root.children || [])
-      setCodeEditorValue(generatedCode)
+      // Always regenerate from canvas blocks to get latest variables and component structure
+      const hasCanvasBlocks = data.jsonStructure?.root?.children && data.jsonStructure.root.children.length > 0
+
+      if (hasCanvasBlocks) {
+        // Generate fresh code from canvas blocks with proper variable handling
+        const generatedCode = canvasToCode(
+          data.jsonStructure.root.children || [],
+          data.meta.subject // Pass email subject for component name
+        )
+        setCodeEditorValue(generatedCode)
+      } else if (data.jsxSource) {
+        // Fallback: Use jsx_source from backend only if no canvas blocks
+        const codeWithImports = wrapWithImports(data.jsxSource)
+        setCodeEditorValue(codeWithImports)
+      }
     }
   }, [data, isCodeDirty])
 
@@ -99,29 +112,25 @@ export default function EmailDetail() {
   }
 
   const handleSaveCode = async (code: string) => {
-    const parseResult = codeToCanvas(code)
-
-    if (!parseResult.success) {
-      toast.error(`Failed to parse code: ${parseResult.error}`)
-      throw new Error(parseResult.error)
-    }
-
     try {
-      // Update email with new code
-      // For now, keep existing jsonStructure (canvas as source of truth)
+      // Strip imports before sending to backend (backend expects bare JSX)
+      const bareJsx = stripImports(code)
+
+      // Send JSX to backend - it will parse and validate
       await updateEmail.mutateAsync({
         id: email.id,
         data: {
-          // In future: Update jsonStructure from parseResult.blocks
-          // For now, just acknowledge save without updating structure
+          jsxSource: bareJsx, // Backend parses this to json_state
         },
       })
 
       setIsCodeDirty(false)
       setCodeEditorValue(code)
       toast.success('Code saved successfully')
-    } catch (error) {
-      toast.error('Failed to save code')
+    } catch (error: any) {
+      // Backend returns helpful error messages for invalid JSX
+      const errorMessage = error.details || error.error || 'Failed to save code'
+      toast.error(errorMessage)
       throw error
     }
   }

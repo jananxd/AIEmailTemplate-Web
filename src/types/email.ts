@@ -2,6 +2,7 @@ export interface Email {
   id: string
   meta: EmailMeta
   jsonStructure: EmailJSON
+  jsxSource?: string | null
   variables: string[]
   prompt: string
   attachedImage?: string

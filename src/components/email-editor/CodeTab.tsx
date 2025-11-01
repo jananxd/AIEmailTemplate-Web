@@ -2,7 +2,6 @@ import { useCallback, useState, useEffect } from 'react'
 import CodeEditor from './CodeEditor'
 import LivePreview from './LivePreview'
 import { useCodeEditor } from '../../hooks/useCodeEditor'
-import { validateCode } from '../../utils/validateCode'
 
 interface CodeTabProps {
   initialCode: string
@@ -29,16 +28,16 @@ export default function CodeTab({ initialCode, onSave }: CodeTabProps) {
   }, [handleEditorDidMount])
 
   const handleSave = useCallback(async () => {
-    const validation = validateCode(code)
-
-    if (!validation.isValid) {
-      setValidationErrors(validation.errors)
-      return
+    // Remove client-side validation - backend will validate
+    try {
+      setValidationErrors([])
+      await onSave(code)
+      resetDirty()
+    } catch (error: any) {
+      // Show backend error message
+      const errorMsg = error.details || error.error || 'Failed to save'
+      setValidationErrors([errorMsg])
     }
-
-    setValidationErrors([])
-    await onSave(code)
-    resetDirty()
   }, [code, onSave, resetDirty])
 
   // Listen for Cmd/Ctrl+S event
@@ -66,7 +65,7 @@ export default function CodeTab({ initialCode, onSave }: CodeTabProps) {
           </div>
           <button
             onClick={handleSave}
-            disabled={!isDirty || validationErrors.length > 0}
+            disabled={!isDirty}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors"
           >
             Save (Cmd/Ctrl+S)
@@ -75,7 +74,7 @@ export default function CodeTab({ initialCode, onSave }: CodeTabProps) {
 
         {validationErrors.length > 0 && (
           <div className="bg-red-600 text-white px-3 py-2 rounded text-sm">
-            <strong>Cannot save:</strong>
+            <strong>JSX Parsing Error:</strong>
             <ul className="mt-1 ml-4 list-disc">
               {validationErrors.map((error, i) => (
                 <li key={i}>{error}</li>

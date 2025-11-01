@@ -1,24 +1,23 @@
-import type { EmailNode } from '../types/email'
+/**
+ * JSX to Canvas parsing is now handled by the backend.
+ *
+ * The backend provides a PATCH /emails/:id endpoint that accepts jsx_source
+ * and returns the parsed json_state.
+ *
+ * This file is kept for backward compatibility but should not be used.
+ */
 
 export interface ParseResult {
   success: boolean
-  blocks?: EmailNode[]
+  blocks?: any[]
   error?: string
 }
 
 /**
- * Parse React email code and convert to Canvas block structure
- *
- * PLACEHOLDER IMPLEMENTATION
- * TODO: Implement actual JSX parsing to extract blocks
+ * @deprecated Use backend API endpoint instead: PATCH /emails/:id with { jsx_source }
  */
 export function codeToCanvas(_code: string): ParseResult {
-  // For now, return empty to avoid breaking Canvas
-  // Real implementation would:
-  // 1. Parse JSX AST
-  // 2. Extract @react-email components
-  // 3. Map to EmailNode types
-  // 4. Return structured blocks
+  console.warn('codeToCanvas is deprecated. Backend handles JSX parsing now.')
 
   return {
     success: true,
